@@ -16,7 +16,7 @@ During generation, a large language model stores a key and a value for every ear
 | Anees | [RestoreKV](https://arxiv.org/abs/2608.01247) (2026) | Drops tokens (KVzip), then adds 8 learned "restore" tokens that summarize what was dropped | kvpress `RestoreKVPress` |
 | Vedant | [TurboQuant](https://arxiv.org/abs/2504.19874) (ICLR 2026) | Quantizes keys and values to 2.5–3.5 bits | Community implementations |
 | Samruddhi | [TriAttention](https://arxiv.org/abs/2604.04921) (ICML 2026) | Keeps the tokens a stable pre-RoPE attention score ranks highest | [WeianMao/triattention](https://github.com/WeianMao/triattention) |
-| Charvee | [DeltaKV](https://arxiv.org/abs/2602.08005) (2026) | Stores each token as a small difference from a similar earlier token | [CURRENTF/DeltaKV](https://github.com/CURRENTF/DeltaKV) |
+| Charvee | [ResidualKV](https://arxiv.org/abs/2602.08005) (2026, formerly DeltaKV) | Stores each token as a small difference from a similar earlier token | [CURRENTF/DeltaKV](https://github.com/CURRENTF/DeltaKV) |
 | Manjot | [RDKV](https://arxiv.org/abs/2605.08317) (2026) | Gives each token a bit-width from 0 (dropped) to 16 using rate-distortion theory | No public code yet |
 
 **Shared baselines:** full cache (no compression), SnapKV (eviction) and KIVI (quantization).
