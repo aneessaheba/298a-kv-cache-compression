@@ -1,124 +1,202 @@
-"""TriAttention as a kvpress ScorerPress for the shared LongBench/RULER harness (SAM / Samruddhi).
+"""TriAttention as a kvpress ScorerPress, faithful to WeianMao/triattention (SAM / Samruddhi).
 
-TriAttention (Mao et al., ICML 2026, arXiv:2604.04921; repo WeianMao/triattention)
-compresses the KV cache by scoring each cached key with a *pre-RoPE* importance
-signal instead of the post-RoPE attention of a few recent queries. The paper's
-observation is that, in long-reasoning models, pre-RoPE query and key vectors
-concentrate around fixed centers, so a key's future importance can be estimated
-from its pre-RoPE geometry (its alignment with the query center and its norm)
-rather than from position-rotated "representative" queries, which rotate away
-from each other and give unstable top-key selection.
+TriAttention (Mao et al., ICML 2026, arXiv:2604.04921) scores each cached key with a
+frequency-domain trigonometric series built from *precomputed* per-head query statistics,
+rather than the post-RoPE attention of a few recent queries. This press reproduces the
+authors' scoring exactly (triattention/methods/pruning_utils.py):
 
-The official repository implements this inside vLLM / SGLang / TensorRT-LLM with
-per-model *precomputed* Q/K frequency statistics (centers and norms). That infra
-is not available in this harness (we run the Hugging Face `kv-press` pipeline on
-a single prompt at a time), so this is a faithful *reimplementation of the scoring
-rule* that stays inside the kvpress `ScorerPress` contract:
+  1. invert RoPE on the cached keys to recover base (pre-RoPE) keys;
+  2. form head_dim/2 complex frequency pairs;
+  3. combine with the calibrated per-head query mean (q_mean_complex) and magnitude
+     (q_abs_mean) to get amplitude `amp`, phase `phi`, and the MLR `extra` term;
+  4. score each key as a trigonometric series over a geometric grid of future
+     query-distance offsets, aggregated (mean) over the grid.
 
-    score(key_i) = cos(angle(k_i, q_center)) * ||k_i||     (pre-RoPE)
+The per-head stats come from members/samruddhi/calibrate_triattention.py (the authors'
+calibration). Recent `window_size` tokens and `n_sink` initial tokens are always kept.
 
-where `q_center` is the mean pre-RoPE query direction over a recent observation
-window (an online proxy for the paper's calibrated query center, computed per
-head). Recent `window_size` tokens are always kept, as in SnapKV / the paper's
-runtime WINDOW_SIZE. The top (1 - compression_ratio) fraction of tokens by score
-is retained; kvpress handles the actual pruning in ScorerPress.compress().
+Set the stats path via TriAttentionPress(stats_path=...). If no stats are available the
+press raises, rather than silently falling back to an approximation.
 
-Register it in harness/run_longbench.py `make_press()` as "triattention" and both
-runners (LongBench, RULER) can score it against the shared baselines.
-
-Documented limitations of this reimplementation live in members/samruddhi/FLAWS.md.
+Register in harness/run_longbench.py make_press() as "triattention".
 """
 
-import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional
 
 import torch
-from torch import nn
-from torch.nn import functional as F
-from transformers.models.llama.modeling_llama import repeat_kv
 
 from kvpress import ScorerPress
-from kvpress.utils import get_prerope_query_states
+
+HERE = Path(__file__).resolve().parent
+DEFAULT_STATS = HERE / "calibration" / "llama31_8b_stats.pt"
+
+
+# ---- exact math from triattention/methods/pruning_utils.py (style="half") ----
+
+def _rotate_half(x):
+    d = x.shape[-1] // 2
+    return torch.cat((-x[..., d:], x[..., :d]), dim=-1)
+
+
+def _invert_rope(rotated, cos, sin, scale):
+    scale_t = torch.tensor(scale, device=rotated.device, dtype=rotated.dtype)
+    base = rotated / scale_t
+    return base * (cos / scale_t) - _rotate_half(base) * (sin / scale_t)
+
+
+def _to_complex_pairs(tensor):
+    real_dtype = torch.float32 if tensor.dtype in (torch.bfloat16, torch.float16) else tensor.dtype
+    t = tensor.to(dtype=real_dtype)
+    fc = t.shape[-1] // 2
+    return torch.complex(t[..., :fc].contiguous(), t[..., fc:].contiguous())
+
+
+def _freq_stats_from_means(q_mean_complex, q_abs_mean, k_unrot, disable_mlr=False):
+    k_complex = _to_complex_pairs(k_unrot)          # [n, fc]
+    q_mean_abs = torch.abs(q_mean_complex)          # [fc]
+    k_abs = torch.abs(k_complex)                    # [n, fc]
+    relative = q_mean_complex.unsqueeze(0) * torch.conj(k_complex)
+    phi = torch.atan2(relative.imag, relative.real)  # [n, fc]
+    amp = q_mean_abs.unsqueeze(0) * k_abs            # [n, fc]
+    if disable_mlr:
+        extra = q_abs_mean.unsqueeze(0) * k_abs
+    else:
+        extra = (q_abs_mean - q_mean_abs).unsqueeze(0) * k_abs
+    return amp, phi, extra
+
+
+def _score_keys(key_positions, round_start, amp, phi, omega, extra, offsets,
+                freq_scale_sq, aggregation="mean"):
+    base_delta = round_start - key_positions.to(device=amp.device, dtype=torch.float32)
+    delta_grid = base_delta.unsqueeze(1) + offsets.unsqueeze(0)          # [n, n_off]
+    fss = freq_scale_sq.to(device=amp.device, dtype=torch.float32)
+    phase = delta_grid.unsqueeze(2) * omega.view(1, 1, -1) + phi.unsqueeze(1)  # [n, n_off, fc]
+    cos_phase = torch.cos(phase)
+    base_scores = (amp.unsqueeze(1) * fss.view(1, 1, -1) * cos_phase).sum(dim=2)  # [n, n_off]
+    additive = (extra * fss.view(1, -1)).sum(dim=1, keepdim=True)                 # [n, 1]
+    combined = base_scores + additive
+    return combined.mean(dim=1) if aggregation == "mean" else combined.max(dim=1).values
+
+
+def _geometric_offsets(max_length, device):
+    offs, v = [], 1
+    while v <= max_length:
+        offs.append(float(v))
+        v *= 2
+    return torch.tensor(offs, device=device, dtype=torch.float32)
 
 
 @dataclass
 class TriAttentionPress(ScorerPress):
-    """Pre-RoPE, center-aligned KV scoring (TriAttention), as a kvpress ScorerPress.
+    """Faithful TriAttention scoring over calibrated per-head frequency statistics.
 
     Parameters
     ----------
-    compression_ratio : float, default 0.0
-        Fraction of key-value pairs to evict. 0.9 keeps 10% of the cache.
-    window_size : int, default 64
-        Recent tokens always kept (never scored for eviction). Matches the
-        paper's runtime WINDOW_SIZE and SnapKV's observation window.
-    norm_power : float, default 1.0
-        Weight of the key-norm term. 0.0 scores by center-alignment only
-        (pure direction), 1.0 multiplies by the pre-RoPE key norm. Lets us
-        probe the paper's claim that both direction and magnitude matter.
+    compression_ratio : float
+        Fraction of key-value pairs to evict (0.9 keeps 10%).
+    window_size : int
+        Recent tokens always kept (the runtime WINDOW_SIZE).
+    n_sink : int
+        Initial attention-sink tokens always kept.
+    stats_path : str
+        Path to the calibrated .pt (from calibrate_triattention.py).
+    offset_max_length : int
+        Max geometric distance offset for the trig series (authors' default 65536).
+    score_aggregation : str
+        "mean" or "max" over the offset grid (authors' default "mean").
     """
 
     compression_ratio: float = 0.0
     window_size: int = 64
-    norm_power: float = 1.0
-    n_sink: int = 4  # initial attention-sink tokens always kept (StreamingLLM finding)
+    n_sink: int = 4
+    stats_path: str = str(DEFAULT_STATS)
+    offset_max_length: int = 65536
+    score_aggregation: str = "mean"
 
-    def _prerope_key_states(self, module, hidden_states):
-        """Pre-RoPE keys, shape (bsz, num_kv_heads, k_len, head_dim).
+    # lazily initialised from the model + stats on first score() call
+    _ready: bool = field(default=False, repr=False)
 
-        kvpress hands `score()` the post-RoPE cached keys; TriAttention scores in
-        the *un-rotated* key space, so we recompute the pre-RoPE keys from k_proj
-        on the same hidden states. At prefill q_len == k_len, so positions align.
-        """
-        bsz, q_len, _ = hidden_states.shape
-        head_dim = module.head_dim
-        num_kv_heads = module.config.num_key_value_heads
-        key_states = module.k_proj(hidden_states)
-        key_states = key_states.view(bsz, q_len, num_kv_heads, head_dim).transpose(1, 2)
-        # Qwen3/Gemma3 apply a learned k_norm before RoPE.
-        if hasattr(module, "k_norm") and module.k_norm is not None:
-            try:
-                key_states = module.k_norm(key_states)
-            except Exception:
-                pass
-        return key_states
+    def _init_from_module(self, module):
+        path = Path(self.stats_path)
+        if not path.exists():
+            raise FileNotFoundError(
+                f"TriAttention stats not found: {path}\n"
+                f"Run members/samruddhi/calibrate_triattention.py first.")
+        device = module.k_proj.weight.device
+        payload = torch.load(path, map_location=device)
+        meta, raw = payload["metadata"], payload["stats"]
+        self._stats = {}
+        for layer, head in (tuple(x) for x in meta["sampled_heads"]):
+            e = raw.get(f"layer{layer:02d}_head{head:02d}")
+            if e is None:
+                continue
+            self._stats[(int(layer), int(head))] = (
+                torch.complex(e["q_mean_real"].to(device, torch.float32),
+                              e["q_mean_imag"].to(device, torch.float32)),
+                e["q_abs_mean"].to(device, torch.float32),
+            )
+        rotary = module.rotary_emb if hasattr(module, "rotary_emb") else None
+        self._rotary = rotary
+        self._attn_scale = float(getattr(rotary, "attention_scaling", 1.0)) if rotary else 1.0
+        inv_freq = rotary.inv_freq.to(device=device, dtype=torch.float32)
+        self._head_dim = int(meta.get("head_dim", inv_freq.numel() * 2))
+        fc = self._head_dim // 2
+        self._omega = inv_freq[:fc]
+        self._offsets = _geometric_offsets(self.offset_max_length, device)
+        # per-frequency RoPE scaling (unit position probe), squared
+        pos0 = torch.zeros(1, 1, device=device, dtype=torch.long)
+        pr = torch.zeros(1, 1, self._head_dim, device=device, dtype=module.k_proj.weight.dtype)
+        c0, s0 = rotary(pr, pos0)
+        self._freq_scale_sq = (c0[0, 0][0::2].pow(2) + s0[0, 0][0::2].pow(2)).to(torch.float32)
+        self._num_heads = module.config.num_attention_heads
+        self._num_kv_heads = module.config.num_key_value_heads
+        self._groups = self._num_heads // self._num_kv_heads
+        self._ready = True
 
     def score(self, module, hidden_states, keys, values, attentions, kwargs):
+        if not self._ready:
+            self._init_from_module(module)
+
         bsz, num_kv_heads, k_len, head_dim = keys.shape
+        layer_idx = getattr(module, "layer_idx", None)
+        device = keys.device
+        positions = torch.arange(k_len, device=device, dtype=torch.float32)
+        round_start = float(k_len)  # score as if querying from just past the context
 
-        # --- Pre-RoPE query center, estimated from the recent observation window ---
-        # The paper calibrates per-model Q centers offline; with no precomputed
-        # stats we use the mean direction of the recent-window pre-RoPE queries as
-        # an online proxy. Queries have num_attention_heads; average over the
-        # heads that share each KV head (GQA) to get one center per KV head.
-        num_heads = module.config.num_attention_heads
-        num_kv_groups = num_heads // num_kv_heads
-        window = min(self.window_size, max(1, hidden_states.shape[1] // 2))
-        q_prerope = get_prerope_query_states(module, hidden_states[:, -window:])  # (bsz, num_heads, w, hd)
-        q_center = q_prerope.mean(dim=2)  # (bsz, num_heads, hd)
-        # Group query heads down to KV heads (mean over each GQA group).
-        q_center = q_center.view(bsz, num_kv_heads, num_kv_groups, head_dim).mean(dim=2)  # (bsz, kv, hd)
-        q_center = F.normalize(q_center.float(), dim=-1)  # unit direction per KV head
+        # RoPE cos/sin for key positions (shared across heads)
+        pos_ids = torch.arange(k_len, device=device).unsqueeze(0)
+        probe = torch.zeros(1, k_len, head_dim, device=device, dtype=keys.dtype)
+        cos, sin = self._rotary(probe, pos_ids)
+        cos0, sin0 = cos[0], sin[0]
 
-        # --- Pre-RoPE keys (recomputed in the same un-rotated space) ---
-        k_prerope = self._prerope_key_states(module, hidden_states).float()  # (bsz, kv, k_len, hd)
+        # Accumulate scores per KV head by averaging the attention heads that map to it.
+        acc = torch.zeros(bsz, num_kv_heads, k_len, device=device, dtype=torch.float32)
+        counts = torch.zeros(num_kv_heads, device=device)
+        heads_for_layer = [(l, h) for (l, h) in self._stats if l == layer_idx]
+        if not heads_for_layer:
+            # layer not in the calibrated sample set: fall back to keeping recent+sink only
+            scores = torch.zeros(bsz, num_kv_heads, k_len, device=device, dtype=torch.float32)
+        else:
+            for (l, h) in heads_for_layer:
+                kv_head = min(num_kv_heads - 1, h // max(1, self._groups))
+                k_vals = keys[0, kv_head].to(torch.float32)
+                k_unrot = _invert_rope(k_vals, cos0, sin0, self._attn_scale)
+                q_mean_complex, q_abs_mean = self._stats[(l, h)]
+                amp, phi, extra = _freq_stats_from_means(q_mean_complex, q_abs_mean, k_unrot)
+                s = _score_keys(positions, round_start, amp, phi, self._omega, extra,
+                                self._offsets, self._freq_scale_sq, self.score_aggregation)
+                acc[0, kv_head] += s
+                counts[kv_head] += 1
+            counts = counts.clamp_min(1.0)
+            scores = acc / counts.view(1, -1, 1)
 
-        # --- TriAttention score: alignment with the query center, scaled by key norm ---
-        # Computed in float32: a bf16 norm/score ties many distinct positions and
-        # hands the eviction choice to arbitrary top-k tie-breaking (see KnormPress).
-        k_norm = k_prerope.norm(dim=-1)  # (bsz, kv, k_len)
-        k_dir = k_prerope / (k_norm.unsqueeze(-1) + 1e-6)
-        alignment = torch.einsum("bkhd,bkd->bkh", k_dir, q_center)  # cos angle, (bsz, kv, k_len)
-        # Shift cos from [-1, 1] to [0, 2] so the norm term can't be cancelled by sign.
-        scores = (alignment + 1.0) * (k_norm.clamp_min(1e-6) ** self.norm_power)
-
-        # --- Protect attention sinks and the recent window ---
-        # Early tokens act as attention sinks (StreamingLLM); evicting them makes the
-        # model emit degenerate output. Recent tokens carry the query/answer cue.
+        # Protect attention sinks and the recent window.
+        window = min(self.window_size, max(1, k_len // 2))
         keep = scores.max() + 1.0
         if self.n_sink > 0 and self.n_sink < k_len:
             scores[..., : self.n_sink] = keep
         if 0 < window <= k_len:
             scores[..., -window:] = keep
-
         return scores.to(keys.dtype)

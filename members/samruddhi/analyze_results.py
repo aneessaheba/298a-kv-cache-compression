@@ -224,7 +224,7 @@ def make_animations(per_task, run_rows, labels):
 def write_results_md(per_task, run_rows, labels):
     tasks = [t for t in TASK_ORDER if t in per_task]
     lines = []
-    lines.append("# TriAttention on LongBench — Results\n")
+    lines.append("# TriAttention on LongBench - Results\n")
     lines.append("**Method:** TriAttention (Mao et al., ICML 2026, "
                  "[arXiv:2604.04921](https://arxiv.org/abs/2604.04921); "
                  "repo [WeianMao/triattention](https://github.com/WeianMao/triattention))  ")
@@ -235,11 +235,12 @@ def write_results_md(per_task, run_rows, labels):
     lines.append("**Baseline:** full cache (no compression). This document covers TriAttention only.\n")
 
     lines.append("## What TriAttention does\n")
-    lines.append("TriAttention scores each cached key in the **pre-RoPE** space (alignment with the "
-                 "per-head query center, scaled by key norm) instead of using the post-RoPE attention of "
-                 "a few recent queries, then keeps the highest-scoring tokens plus a recent window. It is "
-                 "implemented here as a kvpress `ScorerPress` (`members/samruddhi/triattention_press.py`) "
-                 "so it runs through the shared harness with the same fair split and official metrics.\n")
+    lines.append("TriAttention scores each cached key with a frequency-domain trigonometric series built "
+                 "from **precomputed per-head query statistics** (the authors' calibration), then keeps the "
+                 "highest-scoring tokens plus a recent window and the initial sink tokens. It is implemented "
+                 "here as a kvpress `ScorerPress` (`members/samruddhi/triattention_press.py`) running the "
+                 "authors' exact scoring over stats from `calibrate_triattention.py`, so it goes through the "
+                 "shared harness with the same fair split and official metrics as the full-cache baseline.\n")
 
     lines.append("## Runs\n")
     lines.append("| Run | Records | Macro avg | Mean KV cache (GB) | Mean sec/record |")

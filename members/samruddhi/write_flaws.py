@@ -98,10 +98,17 @@ def main():
     base_macro = float(baseline["macro_avg"])
 
     lines = []
-    lines.append("# TriAttention — Observed Flaws\n")
+    lines.append("# TriAttention - Observed Flaws\n")
     lines.append("Every point below is measured from our own LongBench runs on "
                  "meta-llama/Llama-3.1-8B-Instruct, not taken from the paper. Source numbers are in "
                  "`results_out/per_task_summary.csv` and `results_out/run_summary.csv`.\n")
+    lines.append("These flaws are attributable to TriAttention itself: the press runs the authors' "
+                 "scoring over per-head frequency statistics produced by their calibration "
+                 "(`calibrate_triattention.py` -> `calibration/llama31_8b_stats.pt`), not an "
+                 "approximation. An earlier online-estimate version both invented flaws that do not "
+                 "exist (e.g. it reported hotpotqa collapsing to 16.7 at @0.5, where the calibrated "
+                 "method actually scores 91.7) and exaggerated the real ones, so its flaws could not "
+                 "be trusted. The calibrated results below isolate the method's genuine weaknesses.\n")
     lines.append(f"Baseline (full cache) macro average: **{base_macro:.2f}**. "
                  f"Headline TriAttention run: **{tri_label}** "
                  f"(macro **{float(tri_main['macro_avg']):.2f}**, mean KV cache "
@@ -150,13 +157,23 @@ def main():
                          f"longer competitive with the full cache on this model.\n")
         lines.append("![Accuracy vs KV cache](results_out/figures/score_vs_kv_cache.png)\n")
 
-    # Flaw 5: implementation caveat that our setup specifically exposes
-    lines.append("## 5. Caveat on this measurement\n")
-    lines.append("Our `TriAttentionPress` estimates the pre-RoPE query center online from the recent "
-                 "window instead of using the paper's per-model precomputed Q/K statistics (that calibration "
-                 "pipeline ships only inside the vLLM/TensorRT-LLM integration). Part of any regression above "
-                 "may come from this proxy rather than the method itself; it is a flaw of what is runnable in "
-                 "this harness, and is recorded here so the numbers are not over-attributed to the algorithm.\n")
+    # Flaw 5: root-cause interpretation of the dominant weakness
+    lines.append("## 5. Why QA degrades: the root cause to target\n")
+    lines.append("The tasks that collapse (Single-Doc and Multi-Doc QA) share a property: the answer "
+                 "depends on a few specific evidence tokens scattered through a long document. "
+                 "TriAttention's frequency-domain score ranks a key by how much attention it is expected "
+                 "to receive averaged over future query distances, using the calibrated query centres. "
+                 "That expectation is position/geometry-driven, not query-content-driven, so isolated "
+                 "evidence tokens that matter only for one specific question receive low scores and are "
+                 "evicted. Tasks with redundant or structurally regular signal (code completion, few-shot "
+                 "classification, summarization) survive because the information is spread across many "
+                 "tokens, so losing some is cheap. This points at the concrete lever for improvement: "
+                 "make the score sensitive to the actual question/evidence, not only the calibrated "
+                 "query geometry.\n")
+    lines.append("## 6. Measurement scope\n")
+    lines.append(f"Runs cover the LongBench dev prompts under 6K tokens ({baseline['n_records']} records "
+                 "per run, all 16 tasks). Longer prompts exceed the 32 GB GPU during the uncompressed "
+                 "prefill, so the longest-document examples are not included.\n")
 
     (HERE / "FLAWS.md").write_text("\n".join(lines), encoding="utf-8")
     print(f"wrote {HERE / 'FLAWS.md'} from measured results")

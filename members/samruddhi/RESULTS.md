@@ -1,4 +1,4 @@
-# TriAttention on LongBench — Results
+# TriAttention on LongBench - Results
 
 **Method:** TriAttention (Mao et al., ICML 2026, [arXiv:2604.04921](https://arxiv.org/abs/2604.04921); repo [WeianMao/triattention](https://github.com/WeianMao/triattention))  
 **Model:** meta-llama/Llama-3.1-8B-Instruct (bf16)  
@@ -7,35 +7,35 @@
 
 ## What TriAttention does
 
-TriAttention scores each cached key in the **pre-RoPE** space (alignment with the per-head query center, scaled by key norm) instead of using the post-RoPE attention of a few recent queries, then keeps the highest-scoring tokens plus a recent window. It is implemented here as a kvpress `ScorerPress` (`members/samruddhi/triattention_press.py`) so it runs through the shared harness with the same fair split and official metrics.
+TriAttention scores each cached key with a frequency-domain trigonometric series built from **precomputed per-head query statistics** (the authors' calibration), then keeps the highest-scoring tokens plus a recent window and the initial sink tokens. It is implemented here as a kvpress `ScorerPress` (`members/samruddhi/triattention_press.py`) running the authors' exact scoring over stats from `calibrate_triattention.py`, so it goes through the shared harness with the same fair split and official metrics as the full-cache baseline.
 
 ## Runs
 
 | Run | Records | Macro avg | Mean KV cache (GB) | Mean sec/record |
 |---|---|---|---|---|
 | Full cache | 260 | 45.24 | 0.4654 | 9.02 |
-| TriAttention @0.5 | 260 | 38.08 | 0.2396 | 8.39 |
-| TriAttention @0.75 | 260 | 30.55 | 0.1267 | 6.87 |
-| TriAttention @0.9 | 260 | 28.36 | 0.0589 | 7.43 |
-| TriAttention @0.95 | 260 | 26.94 | 0.0364 | 6.16 |
+| TriAttention @0.5 | 260 | 43.18 | 0.2396 | 10.16 |
+| TriAttention @0.75 | 260 | 37.23 | 0.1267 | 9.18 |
+| TriAttention @0.9 | 260 | 32.54 | 0.0589 | 8.94 |
+| TriAttention @0.95 | 260 | 31.50 | 0.0364 | 8.91 |
 
 ## Per-task scores (0-100)
 
 | Task | Full cache | TriAttention @0.5 | TriAttention @0.75 | TriAttention @0.9 | TriAttention @0.95 |
 |---|---|---|---|---|---|
-| qasper | 40.88 | 35.53 | 26.36 | 16.12 | 16.16 |
-| multifieldqa_en | 58.37 | 34.89 | 28.66 | 12.84 | 13.03 |
-| hotpotqa | 66.67 | 16.67 | 16.67 | 16.67 | 16.67 |
-| 2wikimqa | 52.68 | 46.30 | 35.89 | 24.46 | 16.13 |
-| gov_report | 35.93 | 30.88 | 24.73 | 20.88 | 17.93 |
-| qmsum | 23.19 | 15.81 | 15.50 | 14.55 | 16.02 |
-| multi_news | 27.28 | 25.67 | 22.98 | 16.93 | 15.41 |
-| trec | 60.00 | 48.00 | 36.00 | 36.00 | 36.00 |
-| triviaqa | 30.00 | 60.00 | 30.00 | 42.00 | 42.00 |
-| samsum | 42.78 | 43.08 | 40.02 | 41.46 | 36.67 |
-| lcc | 53.91 | 58.07 | 49.48 | 45.23 | 44.18 |
-| repobench-p | 51.19 | 42.06 | 40.27 | 53.20 | 53.04 |
-| **macro average** | 45.24 | 38.08 | 30.55 | 28.36 | 26.94 |
+| qasper | 40.88 | 39.45 | 28.19 | 17.38 | 16.83 |
+| multifieldqa_en | 58.37 | 43.67 | 35.48 | 18.21 | 19.21 |
+| hotpotqa | 66.67 | 91.67 | 53.57 | 58.33 | 58.33 |
+| 2wikimqa | 52.68 | 38.23 | 30.98 | 21.33 | 17.16 |
+| gov_report | 35.93 | 33.20 | 28.06 | 25.65 | 22.87 |
+| qmsum | 23.19 | 20.27 | 18.50 | 15.69 | 18.36 |
+| multi_news | 27.28 | 26.18 | 24.53 | 21.56 | 18.81 |
+| trec | 60.00 | 52.00 | 52.00 | 40.00 | 36.00 |
+| triviaqa | 30.00 | 30.00 | 30.00 | 40.00 | 40.00 |
+| samsum | 42.78 | 42.62 | 44.91 | 40.57 | 40.24 |
+| lcc | 53.91 | 53.77 | 50.48 | 43.33 | 45.36 |
+| repobench-p | 51.19 | 47.18 | 50.02 | 48.38 | 44.89 |
+| **macro average** | 45.24 | 43.18 | 37.23 | 32.54 | 31.50 |
 
 ## Figures
 

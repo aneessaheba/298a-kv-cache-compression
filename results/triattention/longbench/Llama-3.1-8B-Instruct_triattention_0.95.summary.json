@@ -11,18 +11,18 @@
   "device": "cuda",
   "n_records": 260,
   "scores": {
-    "qasper": 16.16,
-    "multifieldqa_en": 13.03,
-    "hotpotqa": 16.67,
-    "2wikimqa": 16.13,
-    "gov_report": 17.93,
-    "qmsum": 16.02,
-    "multi_news": 15.41,
+    "qasper": 16.83,
+    "multifieldqa_en": 19.21,
+    "hotpotqa": 58.33,
+    "2wikimqa": 17.16,
+    "gov_report": 22.87,
+    "qmsum": 18.36,
+    "multi_news": 18.81,
     "trec": 36.0,
-    "triviaqa": 42.0,
-    "samsum": 36.67,
-    "lcc": 44.18,
-    "repobench-p": 53.04,
-    "average": 26.94
+    "triviaqa": 40.0,
+    "samsum": 40.24,
+    "lcc": 45.36,
+    "repobench-p": 44.89,
+    "average": 31.5
   }
 }
