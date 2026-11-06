@@ -1,0 +1,28 @@
+{
+  "args": {
+    "model": "meta-llama/Llama-3.1-8B-Instruct",
+    "data": "C:\\Users\\samm\\Documents\\Samruddhi\\298a-kv-cache-compression\\data\\processed_longbench\\processed_longbench_dev.jsonl",
+    "press": "triattention",
+    "compression_ratio": 0.9,
+    "tasks": "",
+    "per_task": null,
+    "max_prompt_tokens": 6000
+  },
+  "device": "cuda",
+  "n_records": 260,
+  "scores": {
+    "qasper": 16.12,
+    "multifieldqa_en": 12.84,
+    "hotpotqa": 16.67,
+    "2wikimqa": 24.46,
+    "gov_report": 20.88,
+    "qmsum": 14.55,
+    "multi_news": 16.93,
+    "trec": 36.0,
+    "triviaqa": 42.0,
+    "samsum": 41.46,
+    "lcc": 45.23,
+    "repobench-p": 53.2,
+    "average": 28.36
+  }
+}
