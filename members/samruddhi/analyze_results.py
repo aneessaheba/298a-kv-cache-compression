@@ -25,7 +25,8 @@ import matplotlib.pyplot as plt
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-LB_DIR = REPO / "results" / "longbench"
+# Baseline lives in the shared results folder; TriAttention runs live under results/triattention.
+LB_DIRS = [REPO / "results" / "longbench", REPO / "results" / "triattention" / "longbench"]
 OUT = HERE / "results_out"
 FIG = OUT / "figures"
 
@@ -52,10 +53,12 @@ def run_label(press, ratio):
 def load_runs():
     """Return {(press, ratio): [rows]} for the TriAttention + full-cache runs found."""
     runs = {}
-    if not LB_DIR.exists():
-        return runs
-    for jf in sorted(LB_DIR.glob("*.jsonl")):
-        rows = [json.loads(l) for l in jf.open() if l.strip()]
+    jsonls = []
+    for d in LB_DIRS:
+        if d.exists():
+            jsonls.extend(sorted(d.glob("*.jsonl")))
+    for jf in jsonls:
+        rows = [json.loads(l) for l in jf.open(encoding="utf-8") if l.strip()]
         if not rows:
             continue
         press = rows[0].get("press")
@@ -158,11 +161,55 @@ def make_plots(per_task, run_rows, labels):
     plt.figure(figsize=(7, 5))
     plt.bar([r["label"] for r in run_rows], [r["macro_avg"] for r in run_rows])
     plt.ylabel("Macro-average score (0-100)")
-    plt.title("TriAttention vs Full cache — macro average")
+    plt.title("TriAttention vs Full cache - macro average")
     plt.xticks(rotation=15, ha="right")
     plt.tight_layout()
     plt.savefig(FIG / "macro_average.png", dpi=150)
     plt.close()
+
+    # 4. Per-task delta vs full cache (at the most aggressive TriAttention run) - shows the flaw
+    tri_runs = [r for r in run_rows if r["press"] == "triattention"]
+    base_label = next((r["label"] for r in run_rows if r["press"] == "none"), None)
+    if tri_runs and base_label:
+        worst = max(tri_runs, key=lambda r: r["compression_ratio"])["label"]
+        deltas = []
+        for t in tasks:
+            b = per_task[t].get(base_label)
+            v = per_task[t].get(worst)
+            if isinstance(b, float) and isinstance(v, float):
+                deltas.append((t, v - b))
+        deltas.sort(key=lambda x: x[1])
+        names = [d[0] for d in deltas]
+        vals = [d[1] for d in deltas]
+        colors = ["#C44E52" if v < 0 else "#55A868" for v in vals]
+        plt.figure(figsize=(12, 6))
+        plt.barh(names, vals, color=colors)
+        plt.axvline(0, color="black", linewidth=0.8)
+        plt.xlabel(f"Score change vs full cache (points)  -  {worst}")
+        plt.title("Per-task impact of TriAttention: where it hurts (red) and holds up (green)")
+        plt.tight_layout()
+        plt.savefig(FIG / "per_task_delta.png", dpi=150)
+        plt.close()
+
+    # 5. Memory saved vs accuracy kept, per run (dual view of the tradeoff)
+    base = next((r for r in run_rows if r["press"] == "none"), None)
+    if base:
+        import numpy as np
+        labels_b = [r["label"] for r in run_rows]
+        acc_kept = [100 * r["macro_avg"] / base["macro_avg"] for r in run_rows]
+        mem_saved = [100 * (1 - r["mean_kv_cache_gb"] / base["mean_kv_cache_gb"]) for r in run_rows]
+        xb = np.arange(len(labels_b))
+        w = 0.38
+        plt.figure(figsize=(10, 5))
+        plt.bar(xb - w / 2, acc_kept, w, label="Accuracy kept (% of full)", color="#4C72B0")
+        plt.bar(xb + w / 2, mem_saved, w, label="KV memory saved (% vs full)", color="#DD8452")
+        plt.xticks(xb, labels_b, rotation=15, ha="right")
+        plt.ylabel("Percent")
+        plt.title("The tradeoff: memory saved vs accuracy kept")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(FIG / "tradeoff.png", dpi=150)
+        plt.close()
 
 
 def make_animations(per_task, run_rows, labels):
