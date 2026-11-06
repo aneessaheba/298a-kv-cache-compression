@@ -32,7 +32,7 @@ def load_records(path, tasks=None, per_task=None, max_prompt_tokens=None):
     """Read records from a processed LongBench jsonl, optionally keeping the first `per_task` of each task."""
     counts = Counter()
     records = []
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             record = json.loads(line)
             task = record["task"]
