@@ -75,3 +75,31 @@ Time per record: median 1.78 s for full cache and about 7.3 s for RestoreKV.
 - **Memory.** kvpress KVzip and RestoreKV mask evicted pairs and leave them in GPU memory, so peak GPU memory stays around 24 GB on LongBench. Compare methods on the computed `kv_cache_gb`, which includes the uncompressed question.
 - **Interruptions.** The lab machine shut down twice, during the RULER KVzip run and the LongBench 10% run. Both resumed from saved records, and every result file has one row per record with no duplicates.
 - **Still missing.** LongBench KVzip and SnapKV haven't been run, so these tables compare RestoreKV only with full cache. The comparison with published LongBench and RestoreKV numbers is also still to do.
+
+## RestoreKV + quantization (SAM-96)
+
+At the same memory, is it better to keep few tokens in bf16 or more tokens at lower precision? `quantized_restorekv_press.py` adds 4-bit and 2-bit versions, KIVI-style: per-channel scaling for keys and per-token scaling for values. Scales and zero points are counted in the budget, and the 8 restore tokens are quantized too.
+
+`--compression-ratio` means the share of bf16 cache bytes removed, so the existing `kv_cache_gb` calculation stays correct:
+
+```bash
+python members/anees/test_quantized_restorekv.py
+
+python harness/run_longbench.py --press restorekv_4bit --compression-ratio 0.95
+python harness/run_longbench.py --press restorekv_2bit --compression-ratio 0.95
+python harness/run_longbench.py --press restorekv_4bit --compression-ratio 0.9
+python harness/run_longbench.py --press restorekv_2bit --compression-ratio 0.9
+
+python harness/run_ruler.py --press restorekv_4bit --compression-ratio 0.95 --per-task 50
+python harness/run_ruler.py --press restorekv_2bit --compression-ratio 0.95 --per-task 50
+```
+
+| Memory budget | bf16 keeps | 4-bit keeps | 2-bit keeps |
+|---|---|---|---|
+| 5% | 5% | 19.4% | 37.6% |
+| 10% | 10% | 38.8% | 75.3% |
+
+**Limits**
+- The released adapter was trained on keep ratios of 2.5–25%, and only 4-bit at a 5% budget stays in that range. The adapter is also not trained on quantized caches, which is the case for quantization-aware training in spring.
+- Tokens are rounded in place and evicted pairs are masked, as in kvpress, so accuracy is real but memory is computed, not freed.
+- Results are pending: a Mac check on 3 records confirmed the method runs and meets the budget, but that is too few records to compare accuracy.
