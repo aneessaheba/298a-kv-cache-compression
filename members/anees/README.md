@@ -25,7 +25,7 @@ python harness/run_ruler.py --press kvzip --compression-ratio 0.95 --per-task 50
 python harness/run_ruler.py --press restorekv --compression-ratio 0.95 --per-task 50
 ```
 
-These runs were moved into `results/restorekv/`, so they don't overwrite other members' files in `results/longbench/`.
+The shared 800-record full-cache baseline is in `results/longbench/`, and the RestoreKV and RULER runs are in `results/restorekv/`.
 
 ## LongBench results
 
