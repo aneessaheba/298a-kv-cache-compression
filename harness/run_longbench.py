@@ -23,6 +23,8 @@ from pathlib import Path
 import torch
 from transformers import pipeline
 
+import sys
+
 import longbench
 from kvpress import KVzipPress, RestoreKVPress, SnapKVPress  # also registers the kv-press pipeline
 
@@ -30,11 +32,20 @@ REPO = Path(__file__).resolve().parent.parent
 DEFAULT_DATA = REPO / "data" / "processed_longbench" / "processed_longbench_dev.jsonl"
 OUT_DIR = REPO / "results" / "longbench"
 
+# Samruddhi's TriAttention press lives under members/ rather than in kvpress.
+sys.path.insert(0, str(REPO / "members" / "samruddhi"))
+from triattention_press import TriAttentionPress  # noqa: E402
+
 
 def make_press(name, compression_ratio):
     if name == "none":
         return None
-    presses = {"snapkv": SnapKVPress, "kvzip": KVzipPress, "restorekv": RestoreKVPress}
+    presses = {
+        "snapkv": SnapKVPress,
+        "kvzip": KVzipPress,
+        "restorekv": RestoreKVPress,
+        "triattention": TriAttentionPress,
+    }
     if name not in presses:
         raise ValueError(f"unknown press: {name}")
     return presses[name](compression_ratio=compression_ratio)
@@ -114,8 +125,19 @@ def main():
             if device == "cuda":
                 torch.cuda.reset_peak_memory_stats()
             start = time.perf_counter()
-            prediction = pipe(context, question=question, answer_prefix=answer_prefix, press=press,
-                              max_new_tokens=longbench.MAX_NEW_TOKENS[record["task"]])["answer"]
+            try:
+                prediction = pipe(context, question=question, answer_prefix=answer_prefix, press=press,
+                                  max_new_tokens=longbench.MAX_NEW_TOKENS[record["task"]])["answer"]
+                oom = False
+            except torch.cuda.OutOfMemoryError:
+                # Record the OOM instead of crashing the whole run: the kvpress prefill
+                # computes full attention over the uncompressed prompt, so peak memory
+                # scales with prompt length regardless of the compression ratio.
+                torch.cuda.empty_cache()
+                prediction = ""
+                oom = True
+                print(f"[{i}/{len(todo)}] {record['task']:20s} OOM at {record['prompt_tokens_after']} tok "
+                      f"-- recorded as failure")
             seconds = time.perf_counter() - start
             row = {
                 "record_id": record["record_id"],
@@ -124,15 +146,18 @@ def main():
                 "compression_ratio": ratio,
                 "prompt_tokens": record["prompt_tokens_after"],
                 "prediction": prediction,
-                "score": longbench.score(record["task"], prediction, record["answers"], record["all_classes"]),
+                "score": 0.0 if oom else longbench.score(record["task"], prediction,
+                                                         record["answers"], record["all_classes"]),
+                "oom": oom,
                 "seconds": round(seconds, 2),
                 "kv_cache_gb": kv_cache_gb(pipe, context, question + answer_prefix, ratio),
                 "peak_gpu_gb": round(torch.cuda.max_memory_allocated() / 1e9, 2) if device == "cuda" else None,
             }
             out.write(json.dumps(row) + "\n")
             out.flush()
-            print(f"[{i}/{len(todo)}] {record['task']:20s} score={row['score']:.3f}  "
-                  f"{row['seconds']:6.1f}s  {record['prompt_tokens_after']} tok")
+            if not oom:
+                print(f"[{i}/{len(todo)}] {record['task']:20s} score={row['score']:.3f}  "
+                      f"{row['seconds']:6.1f}s  {record['prompt_tokens_after']} tok")
 
     rows = [json.loads(line) for line in out_file.open()]
     rows = [r for r in rows if r["record_id"] in {rec["record_id"] for rec in records}]

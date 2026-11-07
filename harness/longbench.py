@@ -32,7 +32,7 @@ def load_records(path, tasks=None, per_task=None, max_prompt_tokens=None):
     """Read records from a processed LongBench jsonl, optionally keeping the first `per_task` of each task."""
     counts = Counter()
     records = []
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             record = json.loads(line)
             task = record["task"]
@@ -143,7 +143,9 @@ METRICS = {
 def score(task, prediction, answers, all_classes=None):
     """Best score over the reference answers, in [0, 1]."""
     if task in FIRST_LINE_TASKS:
-        prediction = prediction.lstrip("\n").split("\n")[0]
+        # Strip all leading whitespace, not just newlines (LongBench's eval.py strips only "\n"):
+        # Llama often starts these answers with " \n", which would make the first line blank
+        prediction = prediction.lstrip().split("\n")[0]
     metric = METRICS[task]
     return max(metric(prediction, gt, all_classes=all_classes) for gt in answers)
 

@@ -1,0 +1,6 @@
+label,press,compression_ratio,n_records,macro_avg,mean_kv_cache_gb,mean_seconds
+Full cache,none,0.0,260,45.239,0.4654,9.016
+TriAttention @0.5,triattention,0.5,260,43.185,0.2396,10.155
+TriAttention @0.75,triattention,0.75,260,37.227,0.1267,9.181
+TriAttention @0.9,triattention,0.9,260,32.536,0.0589,8.937
+TriAttention @0.95,triattention,0.95,260,31.504,0.0364,8.907
