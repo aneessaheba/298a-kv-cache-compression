@@ -78,7 +78,11 @@ Time per record: median 1.78 s for full cache and about 7.3 s for RestoreKV.
 
 ## RestoreKV + quantization (SAM-96)
 
-At the same memory, is it better to keep few tokens in bf16 or more tokens at lower precision? `quantized_restorekv_press.py` adds 4-bit and 2-bit versions, KIVI-style: per-channel scaling for keys and per-token scaling for values. Scales and zero points are counted in the budget, and the 8 restore tokens are quantized too.
+At the same memory, is it better to keep few tokens in bf16 or more tokens at lower precision? `quantized_restorekv_press.py` adds 4-bit and 2-bit versions, KIVI-style with KIVI's group size of 32:
+- Keys get one scale and zero point per channel for every 32 kept tokens of a head.
+- Values get one scale and zero point per token for every 32 channels.
+
+Scales and zero points are counted in the budget, and the 8 restore tokens are quantized too. A first version used one range per channel across all kept tokens. On the Mac check, 2-bit at a 10% budget then gave wrong answers ("The Oort cloud" for "Atlantic Ocean"), because 4 levels had to cover thousands of tokens.
 
 `--compression-ratio` means the share of bf16 cache bytes removed, so the existing `kv_cache_gb` calculation stays correct:
 
@@ -96,10 +100,12 @@ python harness/run_ruler.py --press restorekv_2bit --compression-ratio 0.95 --pe
 
 | Memory budget | bf16 keeps | 4-bit keeps | 2-bit keeps |
 |---|---|---|---|
-| 5% | 5% | 19.4% | 37.6% |
-| 10% | 10% | 38.8% | 75.3% |
+| 5% | 5% | 16.0% | 26.6% |
+| 10% | 10% | 32.0% | 53.3% |
+
+A kept token costs 160 bytes per head at 4 bits and 96 at 2 bits, against 512 in bf16, including its share of the scales and zero points.
 
 **Limits**
 - The released adapter was trained on keep ratios of 2.5–25%, and only 4-bit at a 5% budget stays in that range. The adapter is also not trained on quantized caches, which is the case for quantization-aware training in spring.
 - Tokens are rounded in place and evicted pairs are masked, as in kvpress, so accuracy is real but memory is computed, not freed.
-- Results are pending: a Mac check on 3 records confirmed the method runs and meets the budget, but that is too few records to compare accuracy.
+- Results are pending. Mac checks with the real model on 5 LongBench records confirmed the method runs, meets the budget and uses at most 16 or 4 levels per group, but that is too few records to compare accuracy.
