@@ -25,7 +25,7 @@ python harness/run_ruler.py --press kvzip --compression-ratio 0.95 --per-task 50
 python harness/run_ruler.py --press restorekv --compression-ratio 0.95 --per-task 50
 ```
 
-The remaining runs (KVzip and SnapKV on LongBench, quantized RestoreKV, the RULER length sweep) are queued in priority order in `run_queue.sh`. Restart it with the same command after an interruption:
+The remaining runs (KVzip and SnapKV on LongBench, quantized RestoreKV, follow-up questions, the RULER length sweep) are queued in priority order in `run_queue.sh`. Restart it with the same command after an interruption:
 
 ```bash
 bash members/anees/run_queue.sh 2>&1 | tee -a queue.log
@@ -115,3 +115,16 @@ A kept token costs 160 bytes per head at 4 bits and 96 at 2 bits, against 512 in
 - The released adapter was trained on keep ratios of 2.5–25%, and only 4-bit at a 5% budget stays in that range. The adapter is also not trained on quantized caches, which is the case for quantization-aware training in spring.
 - Tokens are rounded in place and evicted pairs are masked, as in kvpress, so accuracy is real but memory is computed, not freed.
 - Results are pending. Mac checks with the real model on 5 LongBench records confirmed the method runs, meets the budget and uses at most 16 or 4 levels per group, but that is too few records to compare accuracy.
+
+## Follow-up questions (SAM-98)
+
+Does a cache compressed for one question still answer a second one? `run_followup.py` takes the 125 LongBench documents that have two or more questions (qasper 43, qmsum 34, multifieldqa_en 28, narrativeqa 20, from the full processed set). It compresses each document once and answers its first two questions from the same cache, in two settings:
+
+- `doc`: only the document is compressed, as in the main runs.
+- `q1`: the first question is appended before compressing, so SnapKV picks tokens for it. The second question has to use what was kept for the first.
+
+```bash
+python members/anees/run_followup.py --press snapkv --compression-ratio 0.9   # also none, kvzip, restorekv
+```
+
+In 7 of the documents the two questions' prompts are truncated slightly differently, so the first question's copy of the document is used for both. A Mac check on 3 short qasper documents at a 10% budget ran end to end. With `q1`, SnapKV answered "unanswerable" to all 3 second questions while RestoreKV kept its answers, but 3 documents are too few to conclude anything.
