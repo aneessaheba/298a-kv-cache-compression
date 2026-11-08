@@ -1,57 +1,13 @@
-# Team harness integration status
+# Team integration status
 
-This is Vedant's locally validated TurboQuant reference package, version 0.2.0.
-It is an initial source-code contribution. RTX 5090 results and complete parity
-with the shared harness are pending. The shared runners are not modified by this
-contribution, and TurboQuant is not yet registered as a shared kvpress press.
+The source is integrated in `harness/run_longbench.py` as `turboquant_[mse_]{2,2.5,3,3.5,4}bit` and `turboquant_adaptive`. Other presses retain their existing run path. TurboQuant uses BF16, shared prompts, protected question/generated tokens, the canonical rapidfuzz scorer and the exact 800-record dataset hash.
 
-## Checked against the current team repository
+The saved full-cache result in `results/longbench/Llama-3.1-8B-Instruct_none_0.0.jsonl` is all 800 records; its rounded task macro score is 47.72. The earlier 260-record/45.24 description was obsolete. Standalone fuzzywuzzy scores use another policy and cannot replace the shared baseline.
 
-| Setting | Shared harness | Reference package |
-|---|---|---|
-| Dataset | Team processed LongBench dev file | Enforces frozen 800-record identity |
-| Source prompt | Preprocessed record prompt | Same source field |
-| Chat exceptions | trec, triviaqa, samsum, lcc, repobench-p | Same exceptions |
-| Precision | BF16 | Runner supports BF16 via `--dtype bfloat16`; matrix scripts currently select FP16 |
-| Compression boundary | Document compressible; question/instructions protected | Current adapter quantizes every cached token, including the question and generated suffix |
-| Prompt construction | kvpress document/question pipeline, answer-cue handling | Single formatted prompt with Transformers generation |
-| Scoring | Shared `harness/longbench.py`, scores in 0–1 | Pinned upstream metric functions, scores in 0–100 |
-| Code similarity | rapidfuzz | upstream fuzzywuzzy; backend results can differ |
-| Memory | Computed retained-token storage | Actual packed codes/norms plus separately reported quantizer overhead |
+Document prefill stays full precision; the press changes stored document K/V after that forward. Actual kvpress pipeline tests verify that question and decode forwards do not trigger compression. The cache compatibility API is tested under Transformers 5.2.0. CUDA execution on the lab's Torch 2.7.1+cu128 remains to be tested.
 
-## Required before cross-method results
+Every TurboQuant result includes the nominal setting, per-layer settings, exact logical packed bytes, dtype, scorer scale/policy, fingerprint and model revision. Logical cache sizes include channel selectors and protected-token overhead; decoded BF16 remains resident. Read measured peak GPU memory separately.
 
-1. Use the same BF16 model revision, tokenizer, generation settings and exact input token IDs.
-2. Integrate the shared document/question construction and protect the question
-   and generated suffix, or agree on a common alternate protocol for all methods.
-   Include all protected-token bytes in the memory budget.
-3. Re-score all predictions with one chosen scorer and scale. Do not concatenate
-   shared 0–1 scores with this package's 0–100 scores. Do not assume the two code
-   similarity backends produce identical values.
-4. Use all 800 IDs for the standard comparison. Adaptive evaluation excludes
-   the frozen 32 calibration IDs from every method and its baseline (768 remain).
-5. Compare observed memory budgets, not nominal bits versus eviction percentages.
-6. Execute on the RTX 5090 and preserve environment, commands, predictions and manifests.
+Use `scripts/compare_team_runs.py` for existing shared method outputs. Do not run `turboquant-score` over shared results. Mixed bit rates and eviction ratios are not automatically equal budgets.
 
-The checked-in shared baseline summary at
-`results/longbench/Llama-3.1-8B-Instruct_none_0.0.summary.json` describes a
-260-record run with `max_prompt_tokens=6000` and a 45.24 macro score. It is not
-evidence of a full 800-record run or the reported 47.72 baseline. This contribution
-does not change or reclassify the team's existing results.
-
-## Running the reference package
-
-Use an isolated environment in this directory so its Transformers pin does not
-alter the team's kvpress environment:
-
-```bash
-cd members/vedant
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e '.[dev,hf,plots,score]'
-python -m pytest -q
-```
-
-The GPU runbook covers the standalone reference studies. Until the integration
-steps above are complete, label their outputs as reference experiments rather
-than shared-harness equal-memory results.
+The supplied Drive fix archive and notes were reviewed and incorporated selectively. The current branch adds fractional rates, stronger behavioral tests, normalized/real-query calibration and strict run fingerprints beyond that archive. The Drive guide describes an older five-setting runner; follow the repository's current GPU_RUNBOOK.md instead. It also names a different fork: use the team's authorized `aneessaheba/298a-kv-cache-compression` repository and this branch.

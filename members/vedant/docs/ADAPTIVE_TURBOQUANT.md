@@ -1,71 +1,27 @@
-# Adaptive TurboQuant Extension
+# Adaptive layer allocation — experimental extension
 
-## Contribution
+The allocator chooses 2/3/4-bit layer configurations under the packed storage budget of uniform 3-bit QJL. It is a project extension, not a new published algorithm claim. Uniform mixed-channel rates remain the primary experiments.
 
-The extension assigns a 2-, 3-, or 4-bit TurboQuant configuration to each
-transformer layer under the measured storage budget of uniform 3-bit
-TurboQuant. It is a project contribution built on the paper's quantizer; it is
-not presented as a claim of inventing a new published algorithm.
+The frozen task-stratified split has 32 calibration records, a 32-record context subset drawn from the evaluation pool, and 768 evaluation records. The default calibration takes 16 evenly spaced records from the 32 pool; all 32 remain excluded from adaptive comparisons. The split seed is 20,260. Generate the splits first:
 
-The default, defensible experiment keeps QJL enabled in every layer so the
-paper's unbiased inner-product construction remains intact. An optional
-QJL-on/off allocator exists only as a clearly labeled exploratory ablation.
+```bash
+cd members/vedant
+turboquant-split --input ../../data/processed_longbench/processed_longbench_dev.jsonl --output-dir configs/splits
+```
 
-## Leakage control
+The command regenerates calibration/context JSONL using the frozen split seed. Then:
 
-The supplied 800-record development set has a deterministic task-stratified
-split under `configs/splits/`:
+```bash
+bash scripts/run_adaptive_calibration.sh configs/splits/adaptive_calibration.jsonl \
+ meta-llama/Llama-3.1-8B-Instruct results/calibration 16
+```
 
-- 32 calibration records: two per LongBench task;
-- 32 context-scaling records: two records per task, drawn from the evaluation pool; and
-- 768 held-out evaluation records, excluding calibration records.
+Extraction uses BF16 and shared kvpress prompt formatting. Hooks capture actual post-RoPE Llama query heads, preserving GQA query multiplicity. Calibration retains at most 4096 head/tail tokens per prompt instead of only the first 1024 raw tokens. Tensor loading is shared across all layers of each saved sample. Per-layer rotation seeds, FP32 quantization of BF16 inputs, rounded FP16 norm metadata and BF16 reconstruction match the shared press. This bounded window changes positions and cannot characterize the entire 32K sequence; report that limitation.
 
-The split seed is 20,260. The comparison command excludes the frozen
-calibration IDs when it calculates final quality and bootstrap confidence
-intervals. The predeclared primary calibration run uses 16 evenly spaced
-records from the 32-record pool, which covers each of the 16 tasks once. All 32
-pool records remain excluded from the final comparison as a conservative
-leakage safeguard.
+Both objective terms are dimensionless: `key_weight * key_normalized_mse + value_weight * value_normalized_mse`. Key and value squared reconstruction errors are divided by their own vector energy. Real-query inner-product error (normalized and absolute) is also recorded as a diagnostic, but is not mixed with value relative error in the objective. Position-aligned QK error is a proxy, not the full causal attention distortion. Synthetic-query diagnostics are explicitly labelled if real queries are absent; the all-layer calibration CLI requires saved real queries.
 
-## Allocation method
+The dynamic program selects one candidate per layer, writes measured candidate sizes and the chosen allocation, and defaults to QJL enabled in every layer. QJL-off allocation is a separate ablation. Norm fields are included in representation bytes; the reference implementation's decoded BF16 and dense quantizer state do not count as compressed-representation savings.
 
-For every layer and candidate bit width, calibration records provide:
+Run the resulting `adaptive_allocation.json` with the shared harness's `--press turboquant_adaptive --turboquant-layer-config FILE`. Compare complete shared files with `scripts/compare_team_runs.py --adaptive` to exclude exactly the frozen calibration IDs from every run, including baseline and uniform controls. Optional standalone context scripts are diagnostic studies with their own scoring policy; they are not canonical team comparison results.
 
-- key inner-product squared error;
-- value normalized reconstruction error; and
-- physically packed bytes per vector, including stored norm metadata.
-
-The default objective is the sum of key inner-product error and value
-normalized error. Both weights are configurable. The allocator solves the
-multiple-choice storage-constrained problem using dynamic programming and
-writes the chosen layer configuration, every candidate measurement, a CSV
-table, and a sensitivity heatmap.
-
-The budget is defined by the measured uniform 3-bit QJL configuration rather
-than nominal bit width alone. Final storage is measured again during model
-generation; the allocation estimate is not substituted for the actual cache
-measurement.
-
-## Evaluation
-
-The primary comparison is:
-
-1. uniform 3-bit TurboQuant;
-2. Adaptive TurboQuant under the uniform 3-bit storage budget; and
-3. full precision, plus the previously defined 2/3/4-bit and QJL-off runs.
-
-All methods use identical record IDs, prompts, decoding settings, model
-revision, and scoring code. The report includes paired, task-stratified
-bootstrap 95% confidence intervals for the macro LongBench score difference.
-
-The extension also evaluates 4K, 8K, 16K, and 32K context caps on the frozen
-32-record context subset. The generated plot shows LongBench quality and
-measured total KV-cache MiB as context length increases.
-
-## Success criterion
-
-Adaptive TurboQuant succeeds if it stays within the measured uniform 3-bit
-cache budget and improves the LongBench macro score. If its confidence interval
-includes zero, it is reported as quality-equivalent rather than as a proven
-improvement. A negative result is still useful evidence about layer
-sensitivity and must not be hidden.
+Success requires observed budget compliance and improved paired held-out quality. If the paired bootstrap interval includes zero, report the evidence as inconclusive; it does not prove equivalence. All experimental outcomes are pending GPU execution.

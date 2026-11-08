@@ -19,7 +19,7 @@ for context_length in 4096 8192 16384 32000; do
     --dataset-scope subset
     --model "$model_id"
     --device cuda
-    --dtype float16
+    --dtype bfloat16
     --seed 42
     --max-input-tokens "$context_length"
     --max-new-tokens-config configs/longbench_v1_max_new_tokens.json

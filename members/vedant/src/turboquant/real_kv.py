@@ -12,7 +12,7 @@ import numpy as np
 import torch
 
 from .mse import TurboQuantMSE
-from .packing import pack_mse_codes, pack_product_codes
+from .packing import pack_mse_codes, pack_product_codes, unpack_mse_codes, unpack_product_codes
 from .product import TurboQuantProd
 
 
@@ -46,43 +46,54 @@ def evaluate_real_kv(
     if keys.shape != values.shape or keys.ndim < 2:
         raise ValueError("keys and values must share a shape with vectors on the final axis")
     dimension = keys.shape[-1]
+    source_dtype = keys.dtype
+    quant_dtype = torch.float64 if keys.dtype == torch.float64 else torch.float32
     keys = keys.to(torch.float64)
     values = values.to(torch.float64)
     if queries is None:
         generator = torch.Generator().manual_seed(seed + 99)
         queries = torch.randn(keys.shape, generator=generator, dtype=torch.float64)
         queries = torch.nn.functional.normalize(queries, dim=-1)
-    elif queries.shape != keys.shape:
-        raise ValueError("queries must have the same shape as keys")
+    elif queries.shape != keys.shape and not (
+        queries.ndim == keys.ndim == 4 and queries.shape[0] == keys.shape[0]
+        and queries.shape[2:] == keys.shape[2:] and queries.shape[1] % keys.shape[1] == 0
+    ):
+        raise ValueError("queries must match keys, with an optional GQA head multiple")
     else:
         queries = queries.to(torch.float64)
 
     vector_count = keys.numel() // dimension
     rows = []
     for bits in bit_widths:
-        value_quantizer = TurboQuantMSE(dimension, bits, seed=seed + bits)
+        value_quantizer = TurboQuantMSE(dimension, bits, seed=seed + 10_000, dtype=quant_dtype)
         value_codes = value_quantizer.quantize(values)
-        value_reconstructed = value_quantizer.dequantize(value_codes)
         value_packed = pack_mse_codes(value_codes, bits)
+        value_reconstructed = value_quantizer.dequantize(unpack_mse_codes(value_packed, dtype=quant_dtype)).to(source_dtype)
 
         for qjl in (False, True):
             if qjl and bits < 2:
                 continue
             key_quantizer: TurboQuantMSE | TurboQuantProd
             if qjl:
-                key_quantizer = TurboQuantProd(dimension, bits, seed=seed + 100 + bits)
+                key_quantizer = TurboQuantProd(dimension, bits, seed=seed, dtype=quant_dtype)
                 key_codes = key_quantizer.quantize(keys)
                 key_packed = pack_product_codes(key_codes, bits - 1)
                 method = "turboquant_product"
+                key_codes = unpack_product_codes(key_packed, dtype=quant_dtype)
             else:
-                key_quantizer = TurboQuantMSE(dimension, bits, seed=seed + 100 + bits)
+                key_quantizer = TurboQuantMSE(dimension, bits, seed=seed, dtype=quant_dtype)
                 key_codes = key_quantizer.quantize(keys)
                 key_packed = pack_mse_codes(key_codes, bits)
-                method = "polarquant_mse"
-            key_reconstructed = key_quantizer.dequantize(key_codes)
-            signed_ip_error = (
-                (queries * key_reconstructed).sum(-1) - (queries * keys).sum(-1)
-            )
+                method = "turboquant_mse"
+                key_codes = unpack_mse_codes(key_packed, dtype=quant_dtype)
+            key_reconstructed = key_quantizer.dequantize(key_codes).to(source_dtype)
+            ip_keys, ip_reconstructed = keys, key_reconstructed
+            if queries.shape != keys.shape:
+                repeat = queries.shape[1] // keys.shape[1]
+                ip_keys = keys.repeat_interleave(repeat, dim=1)
+                ip_reconstructed = key_reconstructed.repeat_interleave(repeat, dim=1)
+            reference_ip = (queries * ip_keys).sum(-1)
+            signed_ip_error = (queries * ip_reconstructed).sum(-1) - reference_ip
             compressed_bytes = key_packed.nbytes + value_packed.nbytes
             full_fp16_bytes = 2 * keys.numel() * 2
             rows.append(
@@ -101,13 +112,16 @@ def evaluate_real_kv(
                     ).mean().item(),
                     "mean_signed_inner_product_error": signed_ip_error.mean().item(),
                     "inner_product_error_mse": signed_ip_error.square().mean().item(),
+                    "inner_product_normalized_mse": (signed_ip_error.square().mean() /
+                        reference_ip.square().mean().clamp_min(torch.finfo(torch.float64).tiny)).item(),
                     "packed_bytes": compressed_bytes,
                     "fp16_bytes": full_fp16_bytes,
                     "storage_ratio": compressed_bytes / full_fp16_bytes,
                     "compression_factor": full_fp16_bytes / compressed_bytes,
                 }
             )
-    return {"source_shape": list(keys.shape), "rows": rows}
+    return {"source_shape": list(keys.shape), "quantizer_seed": seed,
+            "quantizer_dtype": str(quant_dtype), "norm_dtype": "torch.float16", "rows": rows}
 
 
 def main() -> None:
@@ -116,11 +130,28 @@ def main() -> None:
     parser.add_argument("--key-name", default="keys")
     parser.add_argument("--value-name", default="values")
     parser.add_argument("--query-name")
+    parser.add_argument("--all-layers", action="store_true", help="load once and evaluate every layer using saved real queries")
     parser.add_argument("--bits", type=int, nargs="+", default=[2, 3, 4])
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output-dir", type=Path, default=Path("results/real_kv"))
     args = parser.parse_args()
     tensors = _load_tensors(args.tensor_file)
+    if args.all_layers:
+        names = sorted(name[:-5] for name in tensors if name.endswith(".keys"))
+        if not names:
+            parser.error("no layer_N.keys tensors found")
+        for prefix in names:
+            if prefix + ".queries" not in tensors:
+                parser.error(f"missing real query tensor {prefix}.queries; rerun extraction with --save-queries")
+            report = evaluate_real_kv(tensors[prefix+".keys"], tensors[prefix+".values"],
+                                      tensors[prefix+".queries"], bit_widths=tuple(args.bits),
+                                      seed=args.seed + int(prefix.split('_')[-1]) * 100_003)
+            report["query_source"] = "model_post_rope"
+            folder = args.output_dir / prefix
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / "real_kv_report.json").write_text(json.dumps(report, indent=2) + "\n")
+        print(json.dumps({"layers": len(names), "query_source": "model_post_rope"}))
+        return
     missing = [name for name in (args.key_name, args.value_name) if name not in tensors]
     if missing:
         raise SystemExit(f"missing tensors {missing}; available names: {sorted(tensors)}")
@@ -132,6 +163,7 @@ def main() -> None:
         bit_widths=tuple(args.bits),
         seed=args.seed,
     )
+    report["query_source"] = "model_post_rope" if queries is not None else "synthetic_unit_gaussian"
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "real_kv_report.json").write_text(json.dumps(report, indent=2) + "\n")
     fields = sorted({key for row in report["rows"] for key in row})

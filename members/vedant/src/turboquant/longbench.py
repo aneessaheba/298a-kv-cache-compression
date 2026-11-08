@@ -1,4 +1,4 @@
-"""Generate LongBench predictions with full KV, PolarQuant, or TurboQuant/QJL."""
+"""Generate LongBench predictions with full KV, TurboQuant-MSE, or TurboQuant/QJL."""
 
 from __future__ import annotations
 
@@ -78,7 +78,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--model", default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument(
-        "--method", choices=["full", "polarquant", "turboquant", "adaptive"], required=True
+        "--method", choices=["full", "turboquant_mse", "polarquant", "turboquant", "adaptive"], required=True
     )
     parser.add_argument("--bits", type=int, choices=[2, 3, 4], default=3)
     parser.add_argument(
@@ -91,7 +91,7 @@ def main() -> None:
     parser.add_argument("--task", action="append")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", default="auto")
-    parser.add_argument("--dtype", choices=["float16", "bfloat16", "float32"], default="float16")
+    parser.add_argument("--dtype", choices=["float16", "bfloat16", "float32"], default="bfloat16")
     parser.add_argument("--token")
     parser.add_argument("--revision")
     parser.add_argument(

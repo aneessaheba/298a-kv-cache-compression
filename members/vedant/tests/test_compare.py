@@ -65,3 +65,10 @@ def test_compare_rejects_prompt_or_scorer_mismatch(tmp_path, field, values):
         paths[name] = path
     with pytest.raises(ValueError, match=field):
         compare_runs(paths)
+
+
+def test_compare_rejects_shared_fractional_scores_without_conversion(tmp_path):
+    path=tmp_path/'shared.jsonl'
+    path.write_text(json.dumps({'record_id':'a','task':'qasper','score':0.9,'score_scale':'0-1'})+'\n')
+    with pytest.raises(ValueError,match='explicit conversion'):
+        compare_runs({'full':path,'tq':path})

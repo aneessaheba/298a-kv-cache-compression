@@ -1,132 +1,60 @@
-# Team 6 TurboQuant
+# TurboQuant — Team 6 reference implementation
 
-**Team repository integration:** read [TEAM_INTEGRATION.md](TEAM_INTEGRATION.md)
-before running a cross-method comparison. The shared harness uses BF16 and
-protects question tokens; this standalone reference path still needs that integration.
+Version 0.3.0. The numerical quantizers and shared-harness integration are implemented. RTX 5090 / Llama-3.1-8B quality and systems measurements remain pending. No GPU result is implied by local tests.
 
-Vedant's TurboQuant reference implementation and reproducible Team 6 experiment
-package. Version 0.2.0 prepares source code for GitHub; Llama 3.1 8B RTX 5090
-quality, peak-memory and performance results remain pending. No expected score
-or speedup is presented as a measured result.
+## Canonical team run
 
-## Implemented
+Use the repository's `harness/run_longbench.py`, BF16, `meta-llama/Llama-3.1-8B-Instruct`, and the frozen 800-record development file (16 tasks, 50 each). Its SHA256 is `fc9d8649f535619c6b3dbe31ad158b112131d85230f92cd253c2e32bb1b7a47c`. The checked-in shared baseline contains all 800 records and scores **47.72** after task macro averaging; it is the team's result, not a TurboQuant result.
 
-- Deterministic Haar rotations, sphere Lloyd–Max codebooks, MSE and Product/QJL quantizers.
-- Physical 1–8 bit packing, norms, a Transformers cache adapter and numerical G3 gate.
-- Full-cache and TurboQuant 2/3/4-bit runs, QJL-off ablations, adaptive layer allocation.
-- Frozen Team 6 dataset identity checks, preprocessed prompts and chat exceptions.
-- Pinned official LongBench metrics with the documented leading-whitespace fix.
-- Safe resume manifests, prompt/token hashes, paired comparison and bootstrap intervals.
-- Separate 800-record team and 768-record held-out adaptive reports.
-
-## Local installation
-
-Python 3.11 or newer. Use a virtual environment; Conda is not required.
+From the repository root, inside the team's CUDA container:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e '.[dev,hf,plots,score]'
-python -m pytest -q
+bash members/vedant/scripts/lab_setup.sh
+source members/vedant/.venv/bin/activate
+hf auth login
+bash members/vedant/scripts/run_harness_longbench.sh
 ```
 
-For the RTX 5090 use `bash scripts/lab_setup.sh`. It captures the environment
-and executes a CUDA matrix operation to check kernel support. Lab drivers and
-the installed PyTorch CUDA build must be compatible; Mac tests cannot prove it.
-Run `hf auth login` interactively. Never commit access tokens or model weights.
-
-## Team data
-
-Obtain `processed_longbench_dev.jsonl` from the team. It contains 800 records
-(16 tasks × 50), SHA-256:
-`fc9d8649f535619c6b3dbe31ad158b112131d85230f92cd253c2e32bb1b7a47c`.
-It is a subset of the team's deduplicated 3,731-record LongBench variant.
-This is a modified benchmark population, not the entire official benchmark.
-
-The normal runner rejects any other file before loading a model. It uses each
-record's `prompt`, preserves `all_classes` and answers, and applies the chat
-template except for `trec`, `triviaqa`, `samsum`, `lcc`, and `repobench-p`.
-Subset smoke/context runs require explicit `--dataset-scope subset`.
+The script first tests 32 records in a separate smoke directory and stops if any OOM occurs. It then prioritizes `turboquant_2.5bit` and `turboquant_3.5bit`, followed by mixed QJL-off and uniform ablations. To run only one setting:
 
 ```bash
-# Set this to your copy; the group's path is one possible location.
-DATA=/path/to/data/processed_longbench/processed_longbench_dev.jsonl
-# Check a single prompt before spending time on the matrix.
-turboquant-longbench --input "$DATA" --model meta-llama/Llama-3.1-8B-Instruct \
-  --method full --device cuda --max-samples 1 --output results/smoke/full.jsonl
+python harness/run_longbench.py --press turboquant_2.5bit
 ```
 
-Use a different output directory for smoke tests with changed settings. Resume
-rejects changes to input identity, code, model revision, prompts/template settings,
-method, bits, seed, dtype, attention backend and generation limits. Preserve
-`*.run.json` beside predictions. Corrupt or legacy files are rejected, not repaired.
+Setup preserves the container's Torch, Transformers and kvpress versions with `--system-site-packages` and constraints. The target image is Python 3.11.13, Torch 2.7.1+cu128, Transformers 5.2.0, kvpress 0.5.5. See [lab runbook](docs/GPU_RUNBOOK.md).
 
-## Run and score
+## What the press does
+
+The document's prefill attention uses the original BF16 keys and values. After each layer's document forward, the press packs and reconstructs that document's K/V. Questions and generated answers remain uncompressed under the shared pipeline. No document unpack occurs at each decoding step.
+
+Uniform settings use TurboQuant-MSE values and either TurboQuant-Prod/QJL keys or MSE keys. Fractional 2.5/3.5-bit settings select the top half of original channels by document-only squared magnitude independently per head for K and V. Two independent subgroup quantizers assign 3/2 or 4/3 bits. This is an explicitly defined implementation of the paper's outlier-group strategy, **not a claim of reproducing its underspecified allocation exactly**. The paper's printed `(32×3+96×2)/128` is 2.25, despite being labelled 2.5. Our 64/64 split gives the stated nominal rate exactly. See [TurboQuant §4.3](https://arxiv.org/html/2504.19874v1).
+
+This shared protocol protects generated tokens; the paper also quantizes generated tokens. Label this a team-protocol adaptation when reporting results.
+
+## Memory and speed
+
+The kvpress path retains decoded BF16 tensors. `kv_cache_gb` is a **computed compressed-representation size**, counting packed codes, subgroup norm metadata, channel permutations, and protected question tokens. It is not allocated CUDA memory. `peak_gpu_gb` is measured separately. Dense rotations/codebooks are implementation state outside the logical cache metric, as are model weights. Do not claim VRAM savings or accelerated decoding from this reference path.
+
+For Llama's head dimension 128, before selectors and protected tokens, QJL K/V representation costs are 17,920 / 23,552 / 26,112 / 31,744 / 34,304 bytes per document token across all layers at 2 / 2.5 / 3 / 3.5 / 4 bits. Fractional settings need two sets of norm fields. Compare actual recorded memory with the team's eviction runs rather than treating bit width as an exactly equal budget.
+
+## Scores and comparisons
+
+The canonical scorer is `harness/longbench.py` (rapidfuzz, **0–1 per record**, leading whitespace stripped before first-line tasks). The shared runner supplies the same document/question split and task-specific chat-template exceptions. Do not re-score canonical results with the standalone scorer: its historical fuzzywuzzy code metric differs.
 
 ```bash
-bash scripts/run_r5_matrix.sh "$DATA" meta-llama/Llama-3.1-8B-Instruct results/longbench
-bash scripts/score_and_compare.sh "$DATA" results/longbench results/report_v1
+python members/vedant/scripts/compare_team_runs.py \
+  --data data/processed_longbench/processed_longbench_dev.jsonl \
+  --run full=results/longbench/Llama-3.1-8B-Instruct_none_0.0.jsonl \
+  --run tq25=results/longbench/Llama-3.1-8B-Instruct_turboquant_2.5bit_0.0.jsonl \
+  --output-dir results/turboquant_comparison
 ```
 
-The standard report includes all 800 records. If an adaptive run is present,
-a second report excludes the frozen 32 calibration IDs from **every** method,
-including full cache, leaving 768 paired records. Never compare an adaptive
-768-record score directly with the group's reported 800-record baseline 47.72.
-Reproduce the baseline with identical settings or recompute its paired subset.
+This validates all 800 IDs/tasks, explicitly converts scores to percentage points for paired, task-stratified bootstrap confidence intervals, retains OOM failures, and reports computed memory separately. Other methods are optional additional `--run NAME=FILE` arguments; no unproduced KIVI file is required. A changed data/code/runtime/allocation fingerprint prevents unsafe resume. Keep the adjacent `.run.json` files with predictions.
 
-The scorer uses official English LongBench v1 metric functions at a pinned
-revision; first-line tasks use `lstrip()` before extracting the first line.
-Per-record scores are 0–100 and averaged per task, then equally across tasks.
-Every output records its scorer policy. See `THIRD_PARTY_NOTICES.md`.
+## Adaptive extension and local checks
 
-## Adaptive and context studies
+[Adaptive calibration](docs/ADAPTIVE_TURBOQUANT.md) uses real post-RoPE queries, shared prompt formatting, bounded 4K head/tail windows and a dimensionless normalized reconstruction objective. It is experimental; the bounded window and QK proxy limitations are explicit. Its layer allocation also runs through the shared press.
 
-```bash
-turboquant-split --input "$DATA" --output-dir configs/splits
-bash scripts/run_adaptive_calibration.sh configs/splits/adaptive_calibration.jsonl \
-  meta-llama/Llama-3.1-8B-Instruct results/adaptive_calibration 16
-bash scripts/run_r5_matrix.sh "$DATA" meta-llama/Llama-3.1-8B-Instruct results/adaptive_matrix \
-  results/adaptive_calibration/allocation/adaptive_allocation.json
-bash scripts/score_and_compare.sh "$DATA" results/adaptive_matrix results/adaptive_report_v1
-```
+The isolated local check passed 56 tests with Transformers 5.2.0 and kvpress 0.5.5 on CPU/Mac (Torch 2.14.1, Python 3.12). These cover cache construction, exact prefill logits, no repeated prompt unpack, mixed rates/accounting, actual shared pipeline behavior, adaptive configuration and resume/paired reporting. They do not validate the lab's CUDA kernels or full 8B run. Older synthetic G3 artifacts remain synthetic numerical evidence only.
 
-Thirty-two records are calibration-only. The 32 context-study records are a
-subset of the 768 evaluation records. Calibration uses 16 prompts, one per task,
-and conservatively excludes all 32 calibration-pool IDs. Generate split JSONL
-locally; GitHub contains the frozen exclusion IDs, not dataset text.
-See `docs/GPU_RUNBOOK.md` for context studies and collection instructions.
-
-## Interpret memory and timing correctly
-
-All layers are compressed. `measured_kv_bytes` counts actual packed codes plus
-norm metadata; `quantizer_state_bytes` reports rotations/projections/codebooks
-separately. The sum is also recorded. No full-precision layers are hidden.
-
-Nominal bits are not retention percentages. At Llama 3.1 8B FP16, QJL 2/3/4-bit
-payload is approximately 13.7%/19.9%/26.2% of full KV. Use actual per-token byte
-measurements for memory budgets; the comparison reports rate-quality points
-and does not automatically assert equal memory. Methods retaining 10% of tokens
-are not necessarily comparable to any of these settings at equal memory.
-
-The reference adapter reconstructs KV for stock attention. Packed storage
-savings do not prove peak CUDA memory or latency gains. `tokens_per_second` is
-end-to-end generated tokens divided by prefill-plus-decode time, not isolated
-decode throughput. Peak allocated CUDA bytes are recorded separately.
-
-## Source and results releases
-
-Source release: code, tests, configs, runbooks, scorer notices and local G3 evidence.
-Data, credentials, model weights, generated predictions, tensors and build output
-are ignored by Git. Later GPU results should include environment, commands,
-paired raw/scored predictions, manifests and measured reports. Check artifacts
-before intentionally adding them; do not force-add the entire results directory.
-
-## Primary sources
-
-- [TurboQuant](https://arxiv.org/abs/2504.19874)
-- [Official LongBench](https://github.com/THUDM/LongBench)
-- [KIVI](https://github.com/jy-yuan/KIVI)
-
-The shared GitHub harness has now been inspected. Dataset and chat exceptions
-align; precision, prompt construction, protected question tokens and scorer-scale
-integration remain explicit follow-up work in `TEAM_INTEGRATION.md`.
+Read [fix audit](docs/REVIEW_FIXES.md) for review-item status. Historical standalone scripts remain diagnostic tools; use the shared runner for team comparisons.

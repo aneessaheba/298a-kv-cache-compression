@@ -8,8 +8,10 @@ Copyright (c) 2023 THU-KEG & Zhipu AI. MIT license retained beside the code.
 The Team 6 wrapper applies `lstrip()` before first-line extraction for TREC,
 TriviaQA and SAMSum instead of upstream `lstrip('\n')`. Metric functions are
 unchanged. This policy is recorded as `longbench-v1-team6-leading-whitespace-v1`.
-Scores are stored on a 0–100 scale. Use the same scoring policy for every method
-and baseline; do not treat an unverified reported 47.72 as a reproduced baseline.
+This historical standalone wrapper stores 0–100 scores and uses fuzzywuzzy for code similarity.
+Canonical team experiments use `harness/longbench.py`, rapidfuzz and 0–1 per-record
+scores. Do not substitute this historical scorer for the shared scorer. The
+checked-in team baseline contains 800 records with rounded macro score 47.72.
 
 LongBench data and pretrained model weights are external inputs and are not
 included in the GitHub source distribution. Follow the relevant dataset and

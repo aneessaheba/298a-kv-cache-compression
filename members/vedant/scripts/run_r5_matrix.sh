@@ -17,7 +17,7 @@ common_args=(
   --input "$data_path"
   --model "$model_id"
   --device cuda
-  --dtype float16
+  --dtype bfloat16
   --seed 42
   --max-input-tokens 32000
   --max-new-tokens-config configs/longbench_v1_max_new_tokens.json
@@ -47,7 +47,7 @@ fi
 for bit_width in 3 4; do
   turboquant-longbench \
     "${common_args[@]}" \
-    --method polarquant \
+    --method turboquant_mse \
     --bits "$bit_width" \
     --output "$output_dir/qjl_off_${bit_width}bit.jsonl"
 done

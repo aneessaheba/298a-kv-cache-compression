@@ -1,10 +1,9 @@
 """Packed TurboQuant KV cache and Hugging Face cache adapter.
 
-The adapter stores only packed codes between calls. It reconstructs the full
-key/value tensors for the stock attention implementation, making it suitable
-for accuracy experiments and exact persistent-cache byte accounting. A fused
-attention kernel would be required to turn the storage saving into the same
-peak-memory and latency saving during attention.
+The adapter stores packed codes and a decoded cache for stock attention. Only
+new chunks are unpacked; the prompt is never unpacked again during decoding.
+Representation byte accounting covers packed codes, not the resident decoded
+buffers. A fused attention path is required for physical memory savings.
 """
 
 from __future__ import annotations
@@ -99,6 +98,8 @@ class TurboQuantCacheLayer(CacheLayerMixin):  # type: ignore[misc]
         self._batch_size = 0
         self._num_heads = 0
         self._source_element_size = 0
+        self._decoded_keys: torch.Tensor | None = None
+        self._decoded_values: torch.Tensor | None = None
 
     def lazy_initialization(self, key_states: torch.Tensor, value_states: torch.Tensor) -> None:
         if key_states.ndim != 4 or value_states.ndim != 4:
@@ -158,7 +159,42 @@ class TurboQuantCacheLayer(CacheLayerMixin):  # type: ignore[misc]
         self.key_chunks.append(packed_keys)
         self.value_chunks.append(packed_values)
         self.chunk_token_counts.append(key_states.shape[-2])
-        return self.dequantize()
+        # The tokens of the current forward pass attend to each other at full precision
+        # (as in the TurboQuant and KIVI papers and Hugging Face's QuantizedCache); only
+        # what is stored for later steps is quantized. Earlier chunks are decoded once and
+        # kept, instead of unpacking the whole cache again at every generated token.
+        past_keys, past_values = self._decoded_keys, self._decoded_values
+        new_keys, new_values = self._decode_chunk(packed_keys, packed_values)
+        if past_keys is None:
+            self._decoded_keys, self._decoded_values = new_keys, new_values
+            return key_states, value_states
+        self._decoded_keys = torch.cat([past_keys, new_keys], dim=-2)
+        self._decoded_values = torch.cat([past_values, new_values], dim=-2)
+        return (torch.cat([past_keys, key_states.to(past_keys.dtype)], dim=-2),
+                torch.cat([past_values, value_states.to(past_values.dtype)], dim=-2))
+
+    def _decode_chunk(
+        self,
+        key_codes: PackedMSECodes | PackedProductCodes,
+        value_codes: PackedMSECodes,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        assert self._key_quantizer is not None and self._value_quantizer is not None
+        if self.qjl_keys:
+            assert isinstance(key_codes, PackedProductCodes)
+            decoded_key_codes = unpack_product_codes(
+                key_codes, device=self.device, dtype=self._key_quantizer.dtype
+            )
+        else:
+            assert isinstance(key_codes, PackedMSECodes)
+            decoded_key_codes = unpack_mse_codes(
+                key_codes, device=self.device, dtype=self._key_quantizer.dtype
+            )
+        keys = self._key_quantizer.dequantize(decoded_key_codes).to(self.dtype)
+        value_unpacked = unpack_mse_codes(
+            value_codes, device=self.device, dtype=self._value_quantizer.dtype
+        )
+        values = self._value_quantizer.dequantize(value_unpacked).to(self.dtype)
+        return keys, values
 
     def dequantize(self) -> tuple[torch.Tensor, torch.Tensor]:
         if not self.is_initialized or not self.key_chunks:
@@ -168,34 +204,23 @@ class TurboQuantCacheLayer(CacheLayerMixin):  # type: ignore[misc]
                 dtype=getattr(self, "dtype", torch.float32),
             )
             return empty, empty.clone()
-        assert self._key_quantizer is not None and self._value_quantizer is not None
-        keys = []
-        values = []
-        for key_codes, value_codes in zip(self.key_chunks, self.value_chunks):
-            if self.qjl_keys:
-                assert isinstance(key_codes, PackedProductCodes)
-                decoded_key_codes = unpack_product_codes(
-                    key_codes, device=self.device, dtype=self._key_quantizer.dtype
-                )
-            else:
-                assert isinstance(key_codes, PackedMSECodes)
-                decoded_key_codes = unpack_mse_codes(
-                    key_codes, device=self.device, dtype=self._key_quantizer.dtype
-                )
-            keys.append(self._key_quantizer.dequantize(decoded_key_codes).to(self.dtype))
-            value_unpacked = unpack_mse_codes(
-                value_codes, device=self.device, dtype=self._value_quantizer.dtype
-            )
-            values.append(self._value_quantizer.dequantize(value_unpacked).to(self.dtype))
-        return torch.cat(keys, dim=-2), torch.cat(values, dim=-2)
+        decoded = [self._decode_chunk(k, v) for k, v in zip(self.key_chunks, self.value_chunks)]
+        return torch.cat([k for k, _ in decoded], dim=-2), torch.cat([v for _, v in decoded], dim=-2)
 
-    def get_mask_sizes(self, query_length: int) -> tuple[int, int]:
+    def get_mask_sizes(self, query_length: int | torch.Tensor) -> tuple[int, int]:
+        # transformers 5.2 (the lab image) passes cache_position; later versions pass the length.
+        if isinstance(query_length, torch.Tensor):
+            query_length = query_length.shape[0]
         return self.get_seq_length() + query_length, 0
 
     def get_seq_length(self) -> int:
         return sum(self.chunk_token_counts)
 
     def get_max_length(self) -> int:
+        return -1
+
+    def get_max_cache_shape(self) -> int:
+        # Required by transformers 5.2; -1 means the cache grows without a fixed size.
         return -1
 
     def storage_stats(self) -> CacheStorageStats:
@@ -216,6 +241,8 @@ class TurboQuantCacheLayer(CacheLayerMixin):  # type: ignore[misc]
         self.key_chunks.clear()
         self.value_chunks.clear()
         self.chunk_token_counts.clear()
+        self._decoded_keys = None
+        self._decoded_values = None
 
     def reorder_cache(self, beam_idx: torch.LongTensor) -> None:
         if self.get_seq_length() > 0:

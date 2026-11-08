@@ -1,6 +1,7 @@
 import pytest
 
 from turboquant.adaptive import LayerCandidate, allocate_layers
+from turboquant.adaptive import _aggregate_reports
 
 
 def candidate(layer: int, bits: int, objective: float, storage: float) -> LayerCandidate:
@@ -25,3 +26,12 @@ def test_allocator_improves_objective_with_reference_storage_budget() -> None:
     assert report["summary"]["selected_measured_bytes_per_vector"] == 20
     assert report["summary"]["selected_objective"] == pytest.approx(0.3)
     assert report["summary"]["objective_reduction"] == pytest.approx(0.7)
+
+
+def test_adaptive_objective_is_not_dominated_by_absolute_key_units():
+    row={'method':'turboquant_product','bits':3,'inner_product_error_mse':1e9,
+         'key_normalized_mse':0.03,'value_normalized_mse':0.02,'packed_bytes':100,'vectors':10}
+    candidates=_aggregate_reports({0:[{'rows':[row]}]},key_weight=1,value_weight=1)
+    assert candidates[0][0].objective == pytest.approx(0.05)
+    row['inner_product_error_mse'] *= 1000
+    assert _aggregate_reports({0:[{'rows':[row]}]},key_weight=1,value_weight=1)[0][0].objective == pytest.approx(0.05)

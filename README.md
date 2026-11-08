@@ -99,10 +99,11 @@ Built-in presses: `none`, `snapkv`, `kvzip`, `restorekv`. A run that stops halfw
 ## Timeline
 
 **TurboQuant source status:** the reference implementation, numerical validation,
-tests, scorer and standalone runbooks are available in `members/vedant/`.
-RTX 5090 results and shared-harness integration are pending. See
-[integration status](members/vedant/TEAM_INTEGRATION.md) for BF16, protected question
-tokens, scorer scales and memory-budget requirements before cross-method comparisons.
+tests and shared-harness runbooks are available in `members/vedant/`.
+The shared runner supports `turboquant_[mse_]{2,2.5,3,3.5,4}bit` and calibrated
+`turboquant_adaptive`, with BF16 and protected question/answer tokens. RTX 5090
+results remain pending. See [integration status](members/vedant/TEAM_INTEGRATION.md)
+for scoring and computed-versus-allocated memory limitations.
 
 | Date | Milestone |
 |---|---|

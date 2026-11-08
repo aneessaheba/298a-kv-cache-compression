@@ -1,4 +1,4 @@
-"""Build the paired TurboQuant-vs-KIVI R5 table from scored harness JSONL files."""
+"""Build paired method comparisons from consistently scored JSONL files."""
 
 from __future__ import annotations
 
@@ -106,6 +106,11 @@ def compare_runs(
             raise ValueError(
                 f"{name} has {len(missing_score)} unscored paired rows; run the shared official evaluator first"
             )
+        scales = {row.get("score_scale") for row in rows.values()}
+        if "0-1" in scales:
+            raise ValueError("shared 0-1 scores require explicit conversion; use scripts/compare_team_runs.py")
+        if len(scales) > 1:
+            raise ValueError(f"{name} contains mixed score scales")
         for rid, row in rows.items():
             score = float(row["score"])
             if not math.isfinite(score) or not 0 <= score <= 100:
@@ -227,7 +232,7 @@ def main() -> None:
         "--run",
         action="append",
         required=True,
-        help="NAME=path.jsonl; include full=... and one or more TurboQuant/KIVI runs",
+        help="NAME=path.jsonl; include full=... and one or more method runs",
     )
     parser.add_argument("--output-dir", type=Path, default=Path("results/r5"))
     parser.add_argument("--evaluation-set", choices=["team", "adaptive", "custom"], default="team")

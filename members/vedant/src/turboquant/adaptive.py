@@ -44,7 +44,9 @@ def _aggregate_reports(
                 grouped[(int(row["bits"]), qjl)].append(row)
         layer_candidates = []
         for (bits, qjl), rows in sorted(grouped.items()):
-            key_error = sum(float(row["inner_product_error_mse"]) for row in rows) / len(rows)
+            # Both terms are dimensionless relative reconstruction errors. Absolute
+            # dot-product MSE would dominate solely because raw key norms are large.
+            key_error = sum(float(row["key_normalized_mse"]) for row in rows) / len(rows)
             value_error = sum(float(row["value_normalized_mse"]) for row in rows) / len(rows)
             bytes_per_vector = sum(
                 float(row["packed_bytes"]) / float(row["vectors"]) for row in rows
@@ -240,6 +242,7 @@ def main() -> None:
         reference_qjl=args.reference_qjl == "on",
         qjl_policy=args.qjl_policy,
     )
+    allocation["objective_definition"] = "key_weight * key_normalized_mse + value_weight * value_normalized_mse"
     _write_outputs(allocation, args.output_dir)
     print(json.dumps(allocation["summary"], indent=2))
 

@@ -29,19 +29,16 @@ for sample in $(seq 0 $((sample_count - 1))); do
     --model "$model_id" \
     --prompt-jsonl "$calibration_path" \
     --record-index "$record_index" \
-    --max-input-tokens 1024 \
+    --max-input-tokens 4096 \
+    --shared-prompt --save-queries \
     --output "$tensor_path" \
-    --dtype float16 \
+    --dtype bfloat16 \
     --device cuda
-  for layer in $(seq 0 31); do
-    layer_dir="$sample_dir/layer_${layer}"
-    turboquant-real-kv \
-      "$tensor_path" \
-      --key-name "layer_${layer}.keys" \
-      --value-name "layer_${layer}.values" \
-      --bits 2 3 4 \
-      --output-dir "$layer_dir"
-    report_args+=(--report "$layer=$layer_dir/real_kv_report.json")
+  turboquant-real-kv "$tensor_path" --all-layers --bits 2 3 4 --output-dir "$sample_dir"
+  for report_path in "$sample_dir"/layer_*/real_kv_report.json; do
+    layer_name=$(basename "$(dirname "$report_path")")
+    layer=${layer_name#layer_}
+    report_args+=(--report "$layer=$report_path")
   done
 done
 

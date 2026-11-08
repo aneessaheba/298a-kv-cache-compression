@@ -1,120 +1,81 @@
-# RTX 5090 runbook
+# RTX 5090 runbook — current shared protocol
 
-Run from the repository root. This package is locally verified; the lab GPU
-installation and Llama 3.1 8B experiment results remain pending.
+Use the university-approved CUDA Docker image and your permitted working folder. This checkout targets the team image Python 3.11.13 / Torch 2.7.1+cu128 / Transformers 5.2.0 / kvpress 0.5.5. Run inside the container, not the Windows host. The Drive guide's five uniform runs and fork URL predate this branch.
 
-## 1 Install and check the environment
+## 1. Code and data
 
 ```bash
-bash scripts/lab_setup.sh
-source .venv/bin/activate
+cd /app
+git clone --branch vedant/turboquant-reference-implementation https://github.com/aneessaheba/298a-kv-cache-compression.git
+cd 298a-kv-cache-compression
+# Extract the supplied data ZIP here, or put the exact processed file at:
+# data/processed_longbench/processed_longbench_dev.jsonl
+python -m zipfile -e ../longbench_dev_data.zip .
+sha256sum data/processed_longbench/processed_longbench_dev.jsonl
+```
+
+Expected hash: `fc9d8649f535619c6b3dbe31ad158b112131d85230f92cd253c2e32bb1b7a47c`. Do not overwrite this branch with the older `turboquant_fixed.zip`.
+
+## 2. Preserve the lab runtime
+
+```bash
+bash members/vedant/scripts/lab_setup.sh
+source members/vedant/.venv/bin/activate
 hf auth login
 hf auth whoami
 ```
 
-No Conda or sudo is required. If CUDA preflight fails, use the lab-approved
-PyTorch build supporting the RTX 5090 and its driver, then rerun preflight.
-The environment record is in `results/environment/`.
+Enter your own read token only at the authentication prompt. The setup uses `--system-site-packages`, performs a CUDA matrix operation, freezes runtime constraints and installs this package without replacing Torch. If the environment lacks the expected team packages, use the team's approved image/setup; do not install a replacement Torch blindly.
 
-## 2 Check data and model access
+## 3. Run priorities
 
 ```bash
-DATA=/path/to/data/processed_longbench/processed_longbench_dev.jsonl
-MODEL=meta-llama/Llama-3.1-8B-Instruct
-turboquant-longbench --input "$DATA" --model "$MODEL" --method full \
-  --device cuda --max-samples 1 --output results/smoke/full.jsonl
-turboquant-score --input results/smoke/full.jsonl --output results/smoke/full_scored.jsonl
+nohup bash members/vedant/scripts/run_harness_longbench.sh > turboquant.log 2>&1 &
+tail -f turboquant.log
 ```
 
-This smoke run verifies execution, not answer quality or the reported 47.72
-baseline. Align model revision, dtype, prompts/token IDs, generation settings
-and scoring policy with the team before treating scores as comparable.
-The full matrix uses a fresh `results/longbench/` directory.
+The 32-record smoke has a separate output directory; any OOM stops the script before full runs. Main order: 2.5 and 3.5 bits with QJL; 2.5/3.5 without QJL; uniform 3/4 with and without QJL; uniform 2 with QJL. These are nine settings, not the older guide's five. Runtime per setting is unmeasured for this implementation; plan a checkpoint after smoke and the first full mixed run rather than promising the old one-hour estimate. Each prediction flushes immediately.
 
-## 3 Numerical and real-KV validation
+To stop after one setting or use a shorter session:
 
 ```bash
-turboquant-g3 --output-dir results/g3
-python -m pytest -q > results/pytest.txt
-turboquant-extract-kv --model "$MODEL" --prompt "Summarize the evidence." \
-  --output results/llama31_8b_kv.safetensors --dtype float16 --device cuda
-for layer in 0 15 31; do
-  turboquant-real-kv results/llama31_8b_kv.safetensors \
-    --key-name "layer_${layer}.keys" --value-name "layer_${layer}.values" \
-    --bits 2 3 4 --output-dir "results/real_kv/layer_${layer}"
-done
+python harness/run_longbench.py --press turboquant_2.5bit
+python harness/run_longbench.py --press turboquant_3.5bit
 ```
 
-Any failed numerical check blocks experimental claims.
+Re-running identical commands resumes verified IDs. A changed dataset, code, selection, allocation or runtime rejects resume. Do not use a smoke file as a full result. OOM rows are recorded as failures; rerunning skips them too. Investigate OOM and use a new output directory for a controlled rerun, retaining failed evidence.
 
-## 4 Standard team comparison on all 800 records
+## 4. Validate and compare
+
+Each complete full run must contain 800 unique IDs, 50 per task; inspect `oom` counts. Scores in JSONL are 0–1. Summary scores are percentages, with the final average computed per task then across tasks. Baseline 47.72 is a reference value, not a hard upper bound on a compressed method.
 
 ```bash
-bash scripts/run_r5_matrix.sh "$DATA" "$MODEL" results/longbench
-bash scripts/score_and_compare.sh "$DATA" results/longbench results/report_v1
+python members/vedant/scripts/compare_team_runs.py \
+ --data data/processed_longbench/processed_longbench_dev.jsonl \
+ --run full=results/longbench/Llama-3.1-8B-Instruct_none_0.0.jsonl \
+ --run tq25=results/longbench/Llama-3.1-8B-Instruct_turboquant_2.5bit_0.0.jsonl \
+ --output-dir results/turboquant_comparison
 ```
 
-This includes full cache, TQ 2/3/4 bits and QJL-off 3/4 bits. Reports are in
-`results/report_v1/team_800/`. A report must contain exactly the expected 800
-IDs and tasks, use the same scorer, and have no duplicate or missing records.
-Scoring refuses to overwrite files; use a new report directory for a rerun.
-Generation resumes only with the original `*.run.json` manifest and settings.
+No independent KIVI artifacts are required. Add other complete shared runs when available. `kv_cache_gb` counts logical document representation plus uncompressed question/chat suffix; it does not prove allocated memory savings. Peak GPU allocation and run time remain separate fields.
 
-## 5 Adaptive study on held-out 768 records
+## 5. Optional adaptive work
+
+Use the frozen calibration split and the instructions in ADAPTIVE_TURBOQUANT.md. Then:
 
 ```bash
-turboquant-split --input "$DATA" --output-dir configs/splits
-bash scripts/run_adaptive_calibration.sh configs/splits/adaptive_calibration.jsonl \
-  "$MODEL" results/adaptive_calibration 16
-bash scripts/run_r5_matrix.sh "$DATA" "$MODEL" results/adaptive_matrix \
-  results/adaptive_calibration/allocation/adaptive_allocation.json
-bash scripts/score_and_compare.sh "$DATA" results/adaptive_matrix results/adaptive_report_v1
+python harness/run_longbench.py --press turboquant_adaptive \
+ --turboquant-layer-config members/vedant/results/calibration/allocation/adaptive_allocation.json
 ```
 
-The standard 800 report excludes adaptive as an evaluated method. Adaptive is
-reported only in `adaptive_768/`, excluding the frozen calibration IDs from
-full cache and every method. The allocator targets uniform 3-bit QJL payload
-storage. Inspect measured bytes before claiming equal memory. The total 800
-records are 32 calibration plus 768 evaluation; the context subset is inside
-those 768, not an additional disjoint split.
+The chosen allocation must cover all 32 model layers. Compare all method files using `compare_team_runs.py --adaptive` so every run excludes the same 32 calibration IDs. Its 768-record scores must not be compared directly to the 800-record headline baseline.
 
-## 6 Context study
+## 6. Bring back and resume safely
 
 ```bash
-bash scripts/run_context_scaling.sh configs/splits/context_scaling.jsonl "$MODEL" \
-  results/context_scaling results/adaptive_calibration/allocation/adaptive_allocation.json
+{ date; nvidia-smi; git rev-parse HEAD; python -m pip freeze; } > lab_env.txt 2>&1
+tar -czf /app/turboquant_results.tgz results/longbench results/turboquant_smoke \
+ members/vedant/results/environment turboquant.log lab_env.txt
 ```
 
-For each output, run `turboquant-score --input RAW.jsonl --output SCORED.jsonl`.
-Then supply all scored files to `turboquant-context-report`, for example
-`--run full,4096=... --run turboquant_3bit,4096=... --run adaptive,4096=...`,
-repeating for 8192, 16384 and 32000, followed by `--output-dir results/context_report`.
-
-## 7 Other methods and memory budgets
-
-Other method owners should preserve `record_id`, `task`, `prediction`, `answers`,
-`all_classes`, model/revision, seed, dtype, prompt/token-ID hashes and their
-storage definition. Use this package's scorer for all methods. Do not substitute
-an aggregate 47.72 without the underlying compatible predictions and setup.
-Compare additional scored runs with `turboquant-compare --run full=... --run
-kivi_2bit=... --evaluation-set team --dataset "$DATA" --output-dir ...`.
-Use `--evaluation-set adaptive` for the held-out 768 comparison.
-
-Report all-layer KV payload bytes, quantizer-state overhead and peak CUDA memory
-separately. Nominal 2-bit is not a 10% retention budget. Our reference path
-reconstructs tensors; it is suitable for quality and packed-storage experiments,
-and its measured runtime must be labelled as reference end-to-end runtime.
-It does not establish fused-kernel production speedups.
-
-## 8 Bring back
-
-- `results/environment/`, command logs, errors and the exact source Git commit.
-- Numerical gate, tests and real-KV reports.
-- All `*.run.json` manifests and raw predictions, including failed-run logs.
-- Scored predictions and `.summary.json` files, both 800 and 768 comparison reports.
-- Adaptive allocation, calibration provenance and context-study inputs/reports.
-- Exact model revision and dataset/split identities.
-
-Keep large calibration tensors locally until the reports and allocation have
-been copied successfully. Do not upload Hugging Face tokens or model weights.
-Add actual GPU artifacts deliberately in a later GitHub results commit.
+Include optional comparison/calibration directories if produced. Retain raw predictions, `.run.json` manifests, summaries, environment records and logs. Upload the archive yourself to the team's designated results folder. Verify the archive is accessible before deleting local lab files under university rules. Resume requires restoring the saved files into an identical checkout/runtime; deleting the only copy prevents resume. Log out of Hugging Face and follow lab cleanup rules.

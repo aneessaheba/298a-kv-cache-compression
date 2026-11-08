@@ -1,4 +1,4 @@
-include README.md STATUS.md THIRD_PARTY_NOTICES.md
+include README.md STATUS.md THIRD_PARTY_NOTICES.md TEAM_INTEGRATION.md turboquant_press.py
 recursive-include src/turboquant/data *.json
 include src/turboquant/vendor/longbench/LICENSE
 recursive-include scripts *.sh *.py
