@@ -25,6 +25,12 @@ python harness/run_ruler.py --press kvzip --compression-ratio 0.95 --per-task 50
 python harness/run_ruler.py --press restorekv --compression-ratio 0.95 --per-task 50
 ```
 
+The remaining runs (KVzip and SnapKV on LongBench, quantized RestoreKV, the RULER length sweep) are queued in priority order in `run_queue.sh`. Restart it with the same command after an interruption:
+
+```bash
+bash members/anees/run_queue.sh 2>&1 | tee -a queue.log
+```
+
 The shared 800-record full-cache baseline is in `results/longbench/`, and the RestoreKV and RULER runs are in `results/restorekv/`.
 
 ## LongBench results
