@@ -42,7 +42,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument("--length", default="4096", choices=["4096", "8192", "16384"])
-    parser.add_argument("--press", default="none", help="none, snapkv, kvzip or restorekv")
+    parser.add_argument("--press", default="none", help="none, snapkv, kvzip, restorekv, restorekv_4bit or restorekv_2bit")
     parser.add_argument("--compression-ratio", type=float, default=0.0, help="fraction of the KV cache removed")
     parser.add_argument("--per-task", type=int, default=None, help="examples per task (default: all 500)")
     args = parser.parse_args()
@@ -69,7 +69,7 @@ def main():
           f"examples={len(examples)} ({len(done)} already done)")
     pipe = pipeline("kv-press-text-generation", model=args.model, device=device, dtype=torch.bfloat16)
     press = make_press(args.press, ratio)
-    if args.press == "restorekv":
+    if args.press.startswith("restorekv"):
         # Load the LoRA adapter now so it lands on the model's device (see members/anees/smoke_test.py)
         press.post_init_from_model(pipe.model)
         pipe.model.to(device)

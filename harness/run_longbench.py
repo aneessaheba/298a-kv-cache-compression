@@ -36,10 +36,16 @@ OUT_DIR = REPO / "results" / "longbench"
 sys.path.insert(0, str(REPO / "members" / "samruddhi"))
 from triattention_press import TriAttentionPress  # noqa: E402
 
+# RestoreKV + quantization (SAM-96); --compression-ratio is the share of bf16 cache bytes removed.
+sys.path.insert(0, str(REPO / "members" / "anees"))
+from quantized_restorekv_press import QuantizedRestoreKVPress  # noqa: E402
+
 
 def make_press(name, compression_ratio):
     if name == "none":
         return None
+    if name in ("restorekv_4bit", "restorekv_2bit"):
+        return QuantizedRestoreKVPress(compression_ratio=compression_ratio, bits=int(name.split("_")[1][0]))
     presses = {
         "snapkv": SnapKVPress,
         "kvzip": KVzipPress,
@@ -81,7 +87,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument("--data", default=str(DEFAULT_DATA))
-    parser.add_argument("--press", default="none", help="none, snapkv, kvzip or restorekv")
+    parser.add_argument("--press", default="none", help="none, snapkv, kvzip, restorekv, restorekv_4bit or restorekv_2bit")
     parser.add_argument("--compression-ratio", type=float, default=0.0, help="fraction of the KV cache removed")
     parser.add_argument("--tasks", default="", help="comma-separated task names (default: all 16)")
     parser.add_argument("--per-task", type=int, default=None, help="records per task (default: all)")
@@ -106,7 +112,7 @@ def main():
           f"records={len(records)} ({len(done)} already done)")
     pipe = pipeline("kv-press-text-generation", model=args.model, device=device, dtype=torch.bfloat16)
     press = make_press(args.press, ratio)
-    if args.press == "restorekv":
+    if args.press.startswith("restorekv"):
         # Load the LoRA adapter now so it lands on the model's device (see members/anees/smoke_test.py)
         press.post_init_from_model(pipe.model)
         pipe.model.to(device)
