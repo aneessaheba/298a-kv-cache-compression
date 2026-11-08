@@ -1,0 +1,6 @@
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+*.csv text eol=lf
+# Preserve the pinned upstream scorer byte-for-byte, including its whitespace.
+src/turboquant/vendor/longbench/metrics.py -text -whitespace
