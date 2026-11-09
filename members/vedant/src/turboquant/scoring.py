@@ -38,7 +38,7 @@ def score_row(row: dict[str, Any]) -> dict[str, Any]:
     if task == "trec" and not row.get("all_classes"):
         raise ValueError("trec requires all_classes; regenerate or join source metadata by record_id")
     fn = getattr(metrics, metric_names[task])
-    value = max(fn(normalized, answer, all_classes=row.get("all_classes", [])) for answer in answers)
+    value = 0.0 if row.get('oom') else max(fn(normalized, answer, all_classes=row.get("all_classes", [])) for answer in answers)
     return {**row, "score": 100.0 * float(value), "score_scale": "0-100",
             "scoring_policy": SCORING_POLICY, "scoring_upstream_revision": UPSTREAM_REVISION}
 

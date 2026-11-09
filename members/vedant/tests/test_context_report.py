@@ -29,3 +29,16 @@ def test_context_report_uses_task_macro_average_and_paired_records(tmp_path) -> 
     full = next(row for row in report if row["run"] == "full")
     assert full["longbench_macro_score"] == pytest.approx(5.0)
     assert full["mean_cache_mib"] == pytest.approx(1.0)
+
+
+def test_oom_keeps_failed_quality_without_claiming_zero_memory(tmp_path):
+    p=tmp_path/'run.jsonl'
+    p.write_text(''.join(json.dumps(row)+'\n' for row in (
+        {'record_id':'a','task':'a','score':0,'input_tokens':20,'oom':True,
+         'measured_kv_bytes':None,'elapsed_seconds':2},
+        {'record_id':'b','task':'a','score':10,'input_tokens':20,'oom':False,
+         'measured_kv_bytes':1024**2,'elapsed_seconds':2})))
+    row=summarize_context_runs({('tq',4096):p})[0]
+    assert row['longbench_macro_score']==5
+    assert row['oom_records']==1 and row['memory_observations']==1
+    assert row['mean_cache_mib']==1

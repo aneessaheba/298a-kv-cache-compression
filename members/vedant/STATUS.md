@@ -10,7 +10,7 @@
 - Explicit outlier-aware 2.5/3.5-bit settings and QJL-off/uniform ablations.
 - Normalized adaptive objective, real query capture, shared-format bounded calibration and shared adaptive press.
 - Dataset hash checks, fingerprinted resume, paired confidence intervals and team-run adapter.
-- 56 local tests passed with Transformers 5.2.0 / kvpress 0.5.5; exact lab CUDA stack not executed.
+- 70 local tests passed with Transformers 5.2.0 / kvpress 0.5.5; exact lab CUDA stack not executed.
 
 ## Required on RTX 5090
 

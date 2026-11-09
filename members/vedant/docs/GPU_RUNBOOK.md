@@ -34,7 +34,7 @@ nohup bash members/vedant/scripts/run_harness_longbench.sh > turboquant.log 2>&1
 tail -f turboquant.log
 ```
 
-The 32-record smoke has a separate output directory; any OOM stops the script before full runs. Main order: 2.5 and 3.5 bits with QJL; 2.5/3.5 without QJL; uniform 3/4 with and without QJL; uniform 2 with QJL. These are nine settings, not the older guide's five. Runtime per setting is unmeasured for this implementation; plan a checkpoint after smoke and the first full mixed run rather than promising the old one-hour estimate. Each prediction flushes immediately.
+The 32-record smoke has a separate output directory; any OOM stops the script before full runs. Main order: 2.5 and 3.5 bits with QJL; 2.5/3.5 without QJL; uniform 3/4 with and without QJL; uniform 2 with and without QJL. These are ten settings, not the older guide's five. Runtime per setting is unmeasured for this implementation; plan a checkpoint after smoke and the first full mixed run rather than promising the old one-hour estimate. Each prediction flushes immediately.
 
 To stop after one setting or use a shorter session:
 

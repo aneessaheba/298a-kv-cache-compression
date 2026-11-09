@@ -55,6 +55,6 @@ This validates all 800 IDs/tasks, explicitly converts scores to percentage point
 
 [Adaptive calibration](docs/ADAPTIVE_TURBOQUANT.md) uses real post-RoPE queries, shared prompt formatting, bounded 4K head/tail windows and a dimensionless normalized reconstruction objective. It is experimental; the bounded window and QK proxy limitations are explicit. Its layer allocation also runs through the shared press.
 
-The isolated local check passed 56 tests with Transformers 5.2.0 and kvpress 0.5.5 on CPU/Mac (Torch 2.14.1, Python 3.12). These cover cache construction, exact prefill logits, no repeated prompt unpack, mixed rates/accounting, actual shared pipeline behavior, adaptive configuration and resume/paired reporting. They do not validate the lab's CUDA kernels or full 8B run. Older synthetic G3 artifacts remain synthetic numerical evidence only.
+The isolated local check passed 70 tests with Transformers 5.2.0 and kvpress 0.5.5 on CPU/Mac (Torch 2.14.1, Python 3.12). These cover cache construction, exact prefill logits, no repeated prompt unpack, mixed rates/accounting, actual shared pipeline behavior, adaptive configuration and resume/paired reporting. They do not validate the lab's CUDA kernels or full 8B run. Older synthetic G3 artifacts remain synthetic numerical evidence only.
 
 Read [fix audit](docs/REVIEW_FIXES.md) for review-item status. Historical standalone scripts remain diagnostic tools; use the shared runner for team comparisons.

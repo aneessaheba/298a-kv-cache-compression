@@ -16,6 +16,6 @@ assert len(rows)==32 and not any(row.get('oom') for row in rows), 'Smoke test in
 PY
 # Main mixed rates first, then uniform and QJL-off ablations.
 for press in turboquant_2.5bit turboquant_3.5bit turboquant_mse_2.5bit turboquant_mse_3.5bit \
-             turboquant_3bit turboquant_4bit turboquant_mse_3bit turboquant_mse_4bit turboquant_2bit; do
+             turboquant_3bit turboquant_4bit turboquant_mse_3bit turboquant_mse_4bit turboquant_2bit turboquant_mse_2bit; do
   python harness/run_longbench.py --data "$DATA" --press "$press"
 done

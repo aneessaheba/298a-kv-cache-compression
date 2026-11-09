@@ -71,6 +71,17 @@ def _dynamic_cache_bytes(cache: Any) -> int:
     return total
 
 
+def _generate_or_oom(model: Any, cache: Any, **kwargs: Any) -> torch.Tensor | None:
+    """Let a failed diagnostic record be scored as a failure without aborting the run."""
+    try:
+        return model.generate(past_key_values=cache, **kwargs)
+    except torch.cuda.OutOfMemoryError:
+        cache.reset()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
@@ -204,9 +215,9 @@ def main() -> None:
                     pad_token_id = tokenizer.eos_token_id
                 if pad_token_id is None or not 0 <= pad_token_id < model.config.vocab_size:
                     pad_token_id = 0
-                generated = model.generate(
+                generated = _generate_or_oom(
+                    model, cache,
                     **encoded,
-                    past_key_values=cache,
                     use_cache=True,
                     do_sample=False,
                     num_beams=1,
@@ -216,6 +227,9 @@ def main() -> None:
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
             elapsed = time.perf_counter() - start
+            oom = generated is None
+            if oom:
+                generated = encoded["input_ids"]
             prediction_ids = generated[0, encoded["input_ids"].shape[-1] :]
             raw_prediction = tokenizer.decode(prediction_ids, skip_special_tokens=True)
             prediction = raw_prediction.strip()
@@ -249,6 +263,7 @@ def main() -> None:
                 "length": row.get("length"),
                 "metric": row["metric"],
                 "score": None,
+                "oom": oom,
                 "input_tokens": int(encoded["input_ids"].shape[-1]),
                 "generated_tokens": int(prediction_ids.numel()),
                 "cache_tokens": cache_tokens,
@@ -257,7 +272,7 @@ def main() -> None:
                 "persistent_storage_ratio": cache_bytes / full_bytes if full_bytes else 0.0,
                 "quantizer_state_bytes": quantizer_bytes,
                 "persistent_cache_plus_quantizer_bytes": cache_bytes + quantizer_bytes,
-                "memory_definition": "packed_codes_and_norm_metadata; quantizer_state_reported_separately",
+                "memory_definition": "logical_packed_codes_and_norm_metadata; decoded_cache_resident; quantizer_state_reported_separately",
                 "full_precision_kv_bytes": full_bytes,
                 "elapsed_seconds": elapsed,
                 "tokens_per_second": prediction_ids.numel() / elapsed,
@@ -285,6 +300,14 @@ def main() -> None:
                 ]
             if device.type == "cuda":
                 result["peak_allocated_bytes"] = torch.cuda.max_memory_allocated(device)
+            if oom:
+                result['score'] = 0.0
+                # A partial failed forward does not establish a cache size or throughput.
+                for name in ('measured_kv_bytes', 'measured_kv_bytes_per_token',
+                             'persistent_storage_ratio', 'quantizer_state_bytes',
+                             'persistent_cache_plus_quantizer_bytes', 'full_precision_kv_bytes',
+                             'tokens_per_second'):
+                    result[name] = None
             output.write(json.dumps(result, ensure_ascii=False) + "\n")
             output.flush()
             count += 1

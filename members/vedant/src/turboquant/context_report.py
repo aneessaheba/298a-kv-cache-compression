@@ -32,6 +32,8 @@ def summarize_context_runs(runs: dict[tuple[str, int], Path]) -> list[dict[str, 
         for row in rows:
             per_task[row["task"]].append(float(row["score"]))
         macro_score = sum(sum(values) / len(values) for values in per_task.values()) / len(per_task)
+        sizes = [float(row['measured_kv_bytes']) for row in rows
+                 if not row.get('oom') and row.get('measured_kv_bytes') is not None]
         summaries.append(
             {
                 "run": name,
@@ -40,9 +42,9 @@ def summarize_context_runs(runs: dict[tuple[str, int], Path]) -> list[dict[str, 
                 "tasks": len(per_task),
                 "longbench_macro_score": macro_score,
                 "mean_input_tokens": sum(float(row["input_tokens"]) for row in rows) / len(rows),
-                "mean_cache_mib": sum(float(row["measured_kv_bytes"]) for row in rows)
-                / len(rows)
-                / (1024 * 1024),
+                "oom_records": sum(bool(row.get('oom')) for row in rows),
+                "memory_observations": len(sizes),
+                "mean_cache_mib": sum(sizes) / len(sizes) / (1024 * 1024) if sizes else None,
                 "mean_elapsed_seconds": sum(float(row["elapsed_seconds"]) for row in rows) / len(rows),
             }
         )

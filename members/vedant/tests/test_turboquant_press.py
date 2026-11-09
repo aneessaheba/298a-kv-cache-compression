@@ -131,7 +131,8 @@ def test_mixed_actual_rate_and_selector_accounting(bits):
     assert torch.equal(k,whole[0]) and torch.equal(v,whole[1])
 
 
-def test_shared_pipeline_preserves_question_and_uses_full_prefill():
+@pytest.mark.parametrize('bits,qjl', [(bits,qjl) for bits in (2,2.5,3,3.5,4) for qjl in (True,False)] + [(None,True)])
+def test_shared_pipeline_preserves_question_and_uses_full_prefill(bits,qjl):
     from tokenizers import Tokenizer
     from tokenizers.models import WordLevel
     from tokenizers.pre_tokenizers import Whitespace
@@ -142,9 +143,10 @@ def test_shared_pipeline_preserves_question_and_uses_full_prefill():
     tokenizer=PreTrainedTokenizerFast(tokenizer_object=tok,bos_token='[BOS]',eos_token='[EOS]',unk_token='[UNK]')
     config=LlamaConfig(vocab_size=5,hidden_size=32,intermediate_size=64,num_hidden_layers=2,
                        num_attention_heads=2,num_key_value_heads=1,head_dim=16,eos_token_id=2)
-    model=LlamaForCausalLM(config).eval()
+    model=LlamaForCausalLM(config).to(torch.bfloat16).eval()
     pipe=KVPressTextGenerationPipeline(model=model,tokenizer=tokenizer)
-    press=TurboQuantPress(bits=2.5)
+    press=(TurboQuantPress(bits=bits,qjl_keys=qjl) if bits is not None else
+           TurboQuantPress(layer_configs=[{'layer':i,'bits':2+i,'qjl_keys':True} for i in range(2)]))
     observed=[]
     original=press.compress
     def capture(module, hidden, keys, values, attentions, kwargs):
@@ -222,3 +224,67 @@ def test_calibration_uses_the_same_packed_reconstruction_as_press():
         expected=((x.double()-k.double()).square().sum(-1)/x.double().square().sum(-1)).mean().item()
         assert row['key_normalized_mse'] == pytest.approx(expected)
         assert row['packed_bytes'] == press.stats['packed_bytes']
+
+
+def test_shared_cli_writes_results_oom_summary_and_checked_resume(tmp_path,monkeypatch):
+    import importlib.util
+    import json
+    from tokenizers import Tokenizer
+    from tokenizers.models import WordLevel
+    from tokenizers.pre_tokenizers import Whitespace
+    from transformers import LlamaConfig,LlamaForCausalLM,PreTrainedTokenizerFast
+    from kvpress import KVPressTextGenerationPipeline
+    from turboquant import protocol
+    repo=Path(__file__).resolve().parents[3]
+    sys.path.insert(0,str(repo/'harness'))
+    spec=importlib.util.spec_from_file_location('shared_cli_audit',repo/'harness/run_longbench.py')
+    runner=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    tok=Tokenizer(WordLevel({'[UNK]':0,'[BOS]':1,'[EOS]':2,'context':3,'question':4},unk_token='[UNK]'))
+    tok.pre_tokenizer=Whitespace()
+    tokenizer=PreTrainedTokenizerFast(tokenizer_object=tok,bos_token='[BOS]',eos_token='[EOS]',unk_token='[UNK]')
+    config=LlamaConfig(vocab_size=5,hidden_size=32,intermediate_size=64,num_hidden_layers=2,
+                       num_attention_heads=2,num_key_value_heads=1,head_dim=16,eos_token_id=2)
+    pipe=KVPressTextGenerationPipeline(model=LlamaForCausalLM(config).to(torch.bfloat16).eval(),tokenizer=tokenizer)
+    def factory(name,**kwargs):
+        assert name=='kv-press-text-generation' and kwargs['dtype']==torch.bfloat16
+        return pipe
+    monkeypatch.setattr(runner,'pipeline',factory)
+    monkeypatch.setattr(runner,'pick_device',lambda:'cpu')
+    calls=[]
+    original_forward=pipe._forward
+    def fail_once(*args,**kwargs):
+        calls.append(1)
+        if len(calls)==1: raise torch.cuda.OutOfMemoryError('simulated')
+        return original_forward(*args,**kwargs)
+    monkeypatch.setattr(pipe,'_forward',fail_once)
+    records=[{'record_id':rid,'task':'triviaqa','prompt':'context\nquestion\nanswer:',
+              'context':'context','answers':['question'],'all_classes':[],
+              'prompt_tokens_after':6} for rid in ('a','b')]
+    data=tmp_path/'synthetic.jsonl'
+    data.write_text(''.join(json.dumps(r)+'\n' for r in records))
+    # This isolated CLI test uses synthetic IDs; the real 800-file hash is audited separately.
+    validations=[]
+    def validate(path):
+        assert path==data
+        validations.append(path)
+        return records
+    monkeypatch.setattr(protocol,'validate_dataset',validate)
+    args=['runner','--model','offline-tiny','--data',str(data),'--press','turboquant_2.5bit',
+          '--output-dir',str(tmp_path/'out')]
+    monkeypatch.setattr(sys,'argv',args)
+    runner.main()
+    output=tmp_path/'out/offline-tiny_turboquant_2.5bit_0.0.jsonl'
+    rows=[json.loads(line) for line in output.read_text().splitlines()]
+    assert len(rows)==2 and rows[0]['oom'] and rows[0]['score']==0
+    assert rows[0]['kv_cache_gb'] is None
+    assert rows[1]['dtype']=='bfloat16' and rows[1]['score_scale']=='0-1'
+    assert rows[1]['turboquant_stats']['layers']==2 and rows[1]['kv_cache_gb']>0
+    summary=json.loads(output.with_suffix('.summary.json').read_text())
+    assert summary['n_records']==2 and summary['device']=='cpu'
+    runner.main()
+    assert len(calls)==2 and len(validations)==2
+    assert len(output.read_text().splitlines())==2
+    monkeypatch.setattr(sys,'argv',args+['--per-task','1'])
+    with pytest.raises(ValueError,match='resume settings differ'):
+        runner.main()

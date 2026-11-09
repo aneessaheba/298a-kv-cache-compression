@@ -111,6 +111,11 @@ def compare_runs(
             raise ValueError("shared 0-1 scores require explicit conversion; use scripts/compare_team_runs.py")
         if len(scales) > 1:
             raise ValueError(f"{name} contains mixed score scales")
+        if scales != {'0-100'}:
+            raise ValueError(f"{name} requires explicit score_scale='0-100'; use the matching scorer or shared adapter")
+        policies = {row.get('scoring_policy') for row in rows.values()}
+        if len(policies) != 1 or not all(policies):
+            raise ValueError(f"{name} requires one explicit scoring_policy for all rows")
         for rid, row in rows.items():
             score = float(row["score"])
             if not math.isfinite(score) or not 0 <= score <= 100:

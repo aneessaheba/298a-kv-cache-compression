@@ -57,3 +57,23 @@ def test_offline_runner_score_resume_and_compare(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "argv", base_args + ["--method", "turboquant", "--bits", "4", "--output", str(tq)])
     with pytest.raises(SystemExit):
         run()
+
+    # Simulate one GPU OOM, then actually generate the second record and resume safely.
+    import torch
+    original_generate=LlamaForCausalLM.generate
+    calls=[]
+    def fail_once(self,*args,**kwargs):
+        calls.append(1)
+        if len(calls)==1:
+            raise torch.cuda.OutOfMemoryError('simulated failure')
+        return original_generate(self,*args,**kwargs)
+    monkeypatch.setattr(LlamaForCausalLM,'generate',fail_once)
+    failed=tmp_path/'with_failure.jsonl'
+    monkeypatch.setattr(sys,'argv',base_args+['--method','turboquant','--output',str(failed)])
+    run()
+    failed_rows=[json.loads(line) for line in failed.read_text().splitlines()]
+    assert len(failed_rows)==2 and failed_rows[0]['oom'] and not failed_rows[1]['oom']
+    assert failed_rows[0]['score']==0 and failed_rows[0]['measured_kv_bytes'] is None
+    score_file(failed,tmp_path/'failure_scored.jsonl')
+    run()
+    assert len(calls)==2 and len(failed.read_text().splitlines())==2
