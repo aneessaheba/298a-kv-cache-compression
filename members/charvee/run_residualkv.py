@@ -4,10 +4,7 @@ Runs the authors' code on the same 800 records, prompts and scorer as every othe
 method, and writes results in the shared format so they compare directly with the
 full-cache baseline in results/longbench/. Settings follow Charvee's configs.
 
-Setup on the lab machine, nothing to install:
-
-    git clone https://github.com/CURRENTF/DeltaKV ../DeltaKV
-    git -C ../DeltaKV checkout 11a837b21acfa475957210c5b2d339b89c1b7e3b
+Setup on the lab machine (DeltaKV is under members/charvee/DeltaKV):
 
     # quick check, 2 records per task (about 10 minutes)
     python members/charvee/run_residualkv.py --compression-ratio 0.9 --per-task 2
@@ -120,7 +117,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument("--compressor", default=COMPRESSOR)
-    parser.add_argument("--deltakv-repo", default=str(REPO.parent / "DeltaKV"))
+    parser.add_argument(
+        "--deltakv-repo",
+        default=str(Path(__file__).resolve().parent / "DeltaKV"),
+        help="Path to DeltaKV source (default: members/charvee/DeltaKV)",
+    )
     parser.add_argument("--data", default=str(DEFAULT_DATA))
     parser.add_argument("--compression-ratio", type=float, default=0.9,
                         help="share of tokens ResidualKV drops from the 27 compressed layers")

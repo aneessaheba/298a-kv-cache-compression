@@ -2,14 +2,14 @@
 
 [ResidualKV](https://arxiv.org/abs/2602.08005), called DeltaKV in the first arXiv version, keeps a few layers whole and, in the other layers, replaces dropped tokens with small compressed residuals against similar tokens that are kept. It uses the authors' code ([CURRENTF/DeltaKV](https://github.com/CURRENTF/DeltaKV), commit `11a837b`) and their released Llama-3.1-8B-Instruct compressor, `JitaiHao/Llama-3.1-8B-Instruct-Compressor`.
 
-Settings follow Charvee's configs (`CharveeSaraiya/Deltakv`, `runs/configs/`). The runner `run_residualkv.py` was set up by Anees so that ResidualKV uses the same 800 dev records, prompts, scorer and results format as the other methods.
+Settings follow Charvee's configs. The runner `run_residualkv.py` was set up by Anees so that ResidualKV uses the same 800 dev records, prompts, scorer and results format as the other methods.
+
+Authors' DeltaKV code is vendored at `members/charvee/DeltaKV/` (no separate clone required). Lab zip layout may still use `/app/DeltaKV`; override with `--deltakv-repo` if needed.
 
 ## How to run (lab RTX 5090, nothing to install)
 
 ```bash
 cd /app/298a-kv-cache-compression
-git clone https://github.com/CURRENTF/DeltaKV ../DeltaKV
-git -C ../DeltaKV checkout 11a837b21acfa475957210c5b2d339b89c1b7e3b
 
 # 1. Quick check, 2 records per task (about 10 minutes). Stop here if it fails.
 python members/charvee/run_residualkv.py --compression-ratio 0.9 --per-task 2
