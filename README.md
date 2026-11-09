@@ -14,7 +14,7 @@ During generation, a large language model stores a key and a value for every ear
 | Member | Method | How it compresses | Code |
 |---|---|---|---|
 | Anees | [RestoreKV](https://arxiv.org/abs/2608.01247) (2026) | Drops tokens (KVzip), then adds 8 learned "restore" tokens that summarize what was dropped | kvpress `RestoreKVPress` |
-| Vedant | [TurboQuant](https://arxiv.org/abs/2504.19874) (ICLR 2026) | Quantizes keys and values to 2.5–3.5 bits | Community implementations |
+| Vedant | [TurboQuant](https://arxiv.org/abs/2504.19874) (ICLR 2026) | Quantizes keys and values to 2/3/4 bits; adaptive per-layer allocation | [Locally validated reference package](members/vedant/) |
 | Samruddhi | [TriAttention](https://arxiv.org/abs/2604.04921) (ICML 2026) | Keeps the tokens a stable pre-RoPE attention score ranks highest | [WeianMao/triattention](https://github.com/WeianMao/triattention) |
 | Charvee | [ResidualKV](https://arxiv.org/abs/2602.08005) (2026, formerly DeltaKV) | Stores each token as a small difference from a similar earlier token | [CURRENTF/DeltaKV](https://github.com/CURRENTF/DeltaKV) |
 | Manjot | [RDKV](https://arxiv.org/abs/2605.08317) (2026) | Gives each token a bit-width from 0 (dropped) to 16 using rate-distortion theory | No public code yet |
@@ -97,6 +97,13 @@ Built-in presses: `none`, `snapkv`, `kvzip`, `restorekv`. A run that stops halfw
 4. Report `kv_cache_gb` for the memory your method actually keeps.
 
 ## Timeline
+
+**TurboQuant source status:** the reference implementation, numerical validation,
+tests and shared-harness runbooks are available in `members/vedant/`.
+The shared runner supports `turboquant_[mse_]{2,2.5,3,3.5,4}bit` and calibrated
+`turboquant_adaptive`, with BF16 and protected question/answer tokens. RTX 5090
+results remain pending. See [integration status](members/vedant/TEAM_INTEGRATION.md)
+for scoring and computed-versus-allocated memory limitations.
 
 | Date | Milestone |
 |---|---|
