@@ -23,12 +23,17 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+import os
+
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-# Baseline lives in the shared results folder; TriAttention runs live under results/triattention.
-LB_DIRS = [REPO / "results" / "longbench", REPO / "results" / "triattention" / "longbench"]
-OUT = HERE / "results_out"
+# Both the naive baseline (press="none") and the TriAttention runs are written by the
+# harness into results/longbench. KEEP_PRESSES filters to just those two.
+LB_DIRS = [REPO / "results" / "longbench"]
+OUT = Path(os.environ.get("SAM_OUT_DIR", str(HERE / "results_out")))
 FIG = OUT / "figures"
+# RESULTS.md / FLAWS.md live in the member folder.
+DOC_DIR = HERE
 
 MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 # TriAttention and the full-cache baseline only.
@@ -319,7 +324,8 @@ def write_results_md(per_task, run_rows, labels):
                  "- `results_out/run_summary.csv` — macro average, mean KV cache, mean latency per run\n"
                  "- `results_out/run_log.txt` — full stdout/stderr of the harness runs\n")
 
-    (HERE / "RESULTS.md").write_text("\n".join(lines), encoding="utf-8")
+    DOC_DIR.mkdir(parents=True, exist_ok=True)
+    (DOC_DIR / "RESULTS.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def main():
@@ -337,7 +343,7 @@ def main():
         print(f"animation step skipped: {e}")
     write_results_md(per_task, run_rows, labels)
     print(f"wrote CSVs + figures to {OUT}")
-    print(f"regenerated {HERE / 'RESULTS.md'}")
+    print(f"regenerated {DOC_DIR / 'RESULTS.md'}")
     for r in run_rows:
         print(f"  {r['label']:22s} macro={r['macro_avg']:.2f}  kv={r['mean_kv_cache_gb']:.4f}GB")
 

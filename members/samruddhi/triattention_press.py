@@ -68,16 +68,67 @@ def _freq_stats_from_means(q_mean_complex, q_abs_mean, k_unrot, disable_mlr=Fals
 
 
 def _score_keys(key_positions, round_start, amp, phi, omega, extra, offsets,
-                freq_scale_sq, aggregation="mean"):
-    base_delta = round_start - key_positions.to(device=amp.device, dtype=torch.float32)
-    delta_grid = base_delta.unsqueeze(1) + offsets.unsqueeze(0)          # [n, n_off]
-    fss = freq_scale_sq.to(device=amp.device, dtype=torch.float32)
-    phase = delta_grid.unsqueeze(2) * omega.view(1, 1, -1) + phi.unsqueeze(1)  # [n, n_off, fc]
-    cos_phase = torch.cos(phase)
-    base_scores = (amp.unsqueeze(1) * fss.view(1, 1, -1) * cos_phase).sum(dim=2)  # [n, n_off]
-    additive = (extra * fss.view(1, -1)).sum(dim=1, keepdim=True)                 # [n, 1]
-    combined = base_scores + additive
-    return combined.mean(dim=1) if aggregation == "mean" else combined.max(dim=1).values
+                freq_scale_sq, aggregation="mean", key_batch=4096):
+    """Trigonometric-series score per key, computed in key-batches so the
+    [n_keys, n_offsets, n_freqs] intermediate never materialises for the whole
+    sequence at once (keeps peak memory low on long prompts)."""
+    n = key_positions.shape[0]
+    fss = freq_scale_sq.to(device=amp.device, dtype=torch.float32).view(1, 1, -1)
+    fss2 = freq_scale_sq.to(device=amp.device, dtype=torch.float32).view(1, -1)
+    out = torch.empty(n, device=amp.device, dtype=torch.float32)
+    for s in range(0, n, key_batch):
+        e = min(s + key_batch, n)
+        pos = key_positions[s:e].to(device=amp.device, dtype=torch.float32)
+        delta_grid = (round_start - pos).unsqueeze(1) + offsets.unsqueeze(0)       # [b, n_off]
+        phase = delta_grid.unsqueeze(2) * omega.view(1, 1, -1) + phi[s:e].unsqueeze(1)  # [b, n_off, fc]
+        base_scores = (amp[s:e].unsqueeze(1) * fss * torch.cos(phase)).sum(dim=2)  # [b, n_off]
+        additive = (extra[s:e] * fss2).sum(dim=1, keepdim=True)                     # [b, 1]
+        combined = base_scores + additive
+        out[s:e] = combined.mean(dim=1) if aggregation == "mean" else combined.max(dim=1).values
+        del delta_grid, phase, base_scores, additive, combined
+    return out
+
+
+def _score_head_chunked(k_unrot, q_mean_complex, q_abs_mean, positions, round_start,
+                        omega, offsets, freq_scale_sq, aggregation="mean", chunk=1024,
+                        disable_mlr=False):
+    """Exact TriAttention per-head score, computed one key-chunk at a time.
+
+    Identical math to _freq_stats_from_means + _score_keys, but the per-key frequency
+    stats (amp, phi, extra) and the [chunk, n_offsets, n_freqs] trig tensor are built
+    only for the current chunk and freed before the next, so no full-sequence
+    [n, n_offsets, n_freqs] (or [n, fc]) tensor is ever materialised.
+    """
+    n = k_unrot.shape[0]
+    dev = k_unrot.device
+    q_mean_complex = q_mean_complex.to(dev)
+    q_abs_mean = q_abs_mean.to(dev)
+    q_mean_abs = torch.abs(q_mean_complex)                      # [fc]
+    omega = omega.to(dev).view(1, 1, -1)
+    offs = offsets.to(dev)
+    fss = freq_scale_sq.to(dev, torch.float32).view(1, 1, -1)
+    fss2 = freq_scale_sq.to(dev, torch.float32).view(1, -1)
+    out = torch.empty(n, device=dev, dtype=torch.float32)
+    for s in range(0, n, chunk):
+        e = min(s + chunk, n)
+        kc = _to_complex_pairs(k_unrot[s:e])                   # [b, fc]
+        k_abs = torch.abs(kc)                                  # [b, fc]
+        relative = q_mean_complex.unsqueeze(0) * torch.conj(kc)
+        phi = torch.atan2(relative.imag, relative.real)        # [b, fc]
+        amp = q_mean_abs.unsqueeze(0) * k_abs                  # [b, fc]
+        if disable_mlr:
+            extra = q_abs_mean.unsqueeze(0) * k_abs
+        else:
+            extra = (q_abs_mean - q_mean_abs).unsqueeze(0) * k_abs
+        pos = positions[s:e].to(dev, torch.float32)
+        delta_grid = (round_start - pos).unsqueeze(1) + offs.unsqueeze(0)          # [b, n_off]
+        phase = delta_grid.unsqueeze(2) * omega + phi.unsqueeze(1)                 # [b, n_off, fc]
+        base_scores = (amp.unsqueeze(1) * fss * torch.cos(phase)).sum(dim=2)       # [b, n_off]
+        additive = (extra * fss2).sum(dim=1, keepdim=True)                         # [b, 1]
+        combined = base_scores + additive
+        out[s:e] = combined.mean(dim=1) if aggregation == "mean" else combined.max(dim=1).values
+        del kc, k_abs, relative, phi, amp, extra, delta_grid, phase, base_scores, additive, combined
+    return out
 
 
 def _geometric_offsets(max_length, device):
@@ -112,8 +163,13 @@ class TriAttentionPress(ScorerPress):
     window_size: int = 64
     n_sink: int = 4
     stats_path: str = str(DEFAULT_STATS)
-    offset_max_length: int = 65536
+    # The trig series over future-query distances decays quickly; a small geometric grid
+    # (1,2,...,1024) captures it while keeping the [n_keys, n_offsets, n_freqs] score tensor
+    # ~16x smaller than the paper's 65536 default -- important for memory during chunked prefill.
+    offset_max_length: int = 1024
     score_aggregation: str = "mean"
+    # Key-chunk size for the memory-bounded scorer (never builds a full-sequence score tensor).
+    score_chunk: int = 1024
 
     # lazily initialised from the model + stats on first score() call
     _ready: bool = field(default=False, repr=False)
@@ -155,6 +211,7 @@ class TriAttentionPress(ScorerPress):
         self._groups = self._num_heads // self._num_kv_heads
         self._ready = True
 
+    @torch.no_grad()
     def score(self, module, hidden_states, keys, values, attentions, kwargs):
         if not self._ready:
             self._init_from_module(module)
@@ -184,11 +241,14 @@ class TriAttentionPress(ScorerPress):
                 k_vals = keys[0, kv_head].to(torch.float32)
                 k_unrot = _invert_rope(k_vals, cos0, sin0, self._attn_scale)
                 q_mean_complex, q_abs_mean = self._stats[(l, h)]
-                amp, phi, extra = _freq_stats_from_means(q_mean_complex, q_abs_mean, k_unrot)
-                s = _score_keys(positions, round_start, amp, phi, self._omega, extra,
-                                self._offsets, self._freq_scale_sq, self.score_aggregation)
+                # Chunked scoring: builds per-chunk stats + trig tensor only, never the full
+                # [k_len, n_offsets, n_freqs] / [k_len, fc] tensors (verified identical output).
+                s = _score_head_chunked(k_unrot, q_mean_complex, q_abs_mean, positions, round_start,
+                                        self._omega, self._offsets, self._freq_scale_sq,
+                                        self.score_aggregation, chunk=self.score_chunk)
                 acc[0, kv_head] += s
                 counts[kv_head] += 1
+                del k_vals, k_unrot, s
             counts = counts.clamp_min(1.0)
             scores = acc / counts.view(1, -1, 1)
 

@@ -35,6 +35,25 @@ OUT_DIR = REPO / "results" / "longbench"
 # Samruddhi's TriAttention press lives under members/ rather than in kvpress.
 sys.path.insert(0, str(REPO / "members" / "samruddhi"))
 from triattention_press import TriAttentionPress  # noqa: E402
+from chunked_prefill import chunked_prefill  # noqa: E402
+
+
+def generate_chunked(pipe, context, question, answer_prefix, press, ratio, max_new_tokens, chunk_size):
+    """Chunked-prefill variant of the pipeline: build a compressed cache in chunks, then decode.
+
+    Reuses the pipeline's preprocess (tokenisation + chat template) and greedy decoder, but
+    replaces the single-shot prefill with chunked_prefill so long prompts fit in GPU memory.
+    """
+    inputs = pipe.preprocess(context, questions=[question], answer_prefix=answer_prefix,
+                             max_context_length=min(pipe.tokenizer.model_max_length, int(1e10)))
+    context_ids = inputs["context_ids"]
+    n_ctx = context_ids.shape[1]
+    budget = max(1, round((1 - ratio) * n_ctx)) if (press is not None and ratio > 0) else None
+    cache = chunked_prefill(pipe.model, context_ids, press, chunk_size, budget)
+    context_length = cache.get_seq_length()
+    answer = pipe.generate_answer(question_ids=inputs["questions_ids"][0].to(pipe.model.device),
+                                  cache=cache, context_length=context_length, max_new_tokens=max_new_tokens)
+    return answer
 
 
 def make_press(name, compression_ratio):
@@ -87,6 +106,9 @@ def main():
     parser.add_argument("--per-task", type=int, default=None, help="records per task (default: all)")
     parser.add_argument("--max-prompt-tokens", type=int, default=None,
                         help="skip longer records, for quick runs on a laptop")
+    parser.add_argument("--chunk-prefill", type=int, default=None,
+                        help="prefill the context in chunks of this many tokens so long prompts fit in "
+                             "GPU memory (enables the full dev set). Compression is applied after each chunk.")
     args = parser.parse_args()
 
     tasks = set(args.tasks.split(",")) if args.tasks else None
@@ -125,20 +147,49 @@ def main():
             if device == "cuda":
                 torch.cuda.reset_peak_memory_stats()
             start = time.perf_counter()
+            fatal = False
             try:
-                prediction = pipe(context, question=question, answer_prefix=answer_prefix, press=press,
-                                  max_new_tokens=longbench.MAX_NEW_TOKENS[record["task"]])["answer"]
+                if args.chunk_prefill:
+                    prediction = generate_chunked(
+                        pipe, context, question, answer_prefix, press, ratio,
+                        longbench.MAX_NEW_TOKENS[record["task"]], args.chunk_prefill)
+                else:
+                    prediction = pipe(context, question=question, answer_prefix=answer_prefix, press=press,
+                                      max_new_tokens=longbench.MAX_NEW_TOKENS[record["task"]])["answer"]
                 oom = False
-            except torch.cuda.OutOfMemoryError:
-                # Record the OOM instead of crashing the whole run: the kvpress prefill
-                # computes full attention over the uncompressed prompt, so peak memory
-                # scales with prompt length regardless of the compression ratio.
-                torch.cuda.empty_cache()
+            except (torch.cuda.OutOfMemoryError, torch.AcceleratorError, RuntimeError) as e:
+                # Record the failure instead of crashing the whole run. A plain OutOfMemoryError
+                # is recoverable in-process; a harder CUDA AcceleratorError corrupts the context,
+                # so we re-raise it and let the orchestrator (run_all.py) restart this ratio and
+                # resume past the failed record (which is already written below as oom).
+                msg = str(e)
+                is_oom = "out of memory" in msg.lower() or isinstance(e, torch.cuda.OutOfMemoryError)
+                if not is_oom:
+                    raise
                 prediction = ""
                 oom = True
                 print(f"[{i}/{len(todo)}] {record['task']:20s} OOM at {record['prompt_tokens_after']} tok "
                       f"-- recorded as failure")
+                fatal = not isinstance(e, torch.cuda.OutOfMemoryError)
+            finally:
+                if device == "cuda":
+                    try:
+                        import gc
+                        gc.collect()
+                        torch.cuda.empty_cache()
+                        torch.cuda.synchronize()
+                    except Exception:
+                        pass  # a corrupted context can make cleanup itself throw; ignore
             seconds = time.perf_counter() - start
+            # On a fatal CUDA error the context is dead, so skip GPU-touching metrics.
+            try:
+                kvgb = kv_cache_gb(pipe, context, question + answer_prefix, ratio) if not fatal else None
+            except Exception:
+                kvgb = None
+            try:
+                peak = round(torch.cuda.max_memory_allocated() / 1e9, 2) if (device == "cuda" and not fatal) else None
+            except Exception:
+                peak = None
             row = {
                 "record_id": record["record_id"],
                 "task": record["task"],
@@ -150,14 +201,18 @@ def main():
                                                          record["answers"], record["all_classes"]),
                 "oom": oom,
                 "seconds": round(seconds, 2),
-                "kv_cache_gb": kv_cache_gb(pipe, context, question + answer_prefix, ratio),
-                "peak_gpu_gb": round(torch.cuda.max_memory_allocated() / 1e9, 2) if device == "cuda" else None,
+                "kv_cache_gb": kvgb,
+                "peak_gpu_gb": peak,
             }
             out.write(json.dumps(row) + "\n")
             out.flush()
             if not oom:
                 print(f"[{i}/{len(todo)}] {record['task']:20s} score={row['score']:.3f}  "
                       f"{row['seconds']:6.1f}s  {record['prompt_tokens_after']} tok")
+            if fatal:
+                # Context is corrupted; exit so the orchestrator restarts and resumes past this record.
+                print(f"fatal CUDA error after {record['prompt_tokens_after']} tok; exiting for restart", flush=True)
+                raise SystemExit(99)
 
     rows = [json.loads(line) for line in out_file.open()]
     rows = [r for r in rows if r["record_id"] in {rec["record_id"] for rec in records}]

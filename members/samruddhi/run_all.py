@@ -22,7 +22,7 @@ DATA = REPO / "data" / "processed_longbench" / "processed_longbench_dev.jsonl"
 LOG = HERE / "results_out" / "run_log.txt"
 
 
-def run(cmd, logf):
+def _run_once(cmd, logf):
     line = ">>> " + " ".join(str(c) for c in cmd) + "\n"
     print(line, end="")
     logf.write(line)
@@ -33,8 +33,26 @@ def run(cmd, logf):
         logf.write(out_line)
         logf.flush()
     proc.wait()
-    if proc.returncode != 0:
-        raise SystemExit(f"command failed ({proc.returncode}): {' '.join(map(str, cmd))}")
+    return proc.returncode
+
+
+def run(cmd, logf, max_restarts=12):
+    """Run a ratio; if it crashes on a fatal CUDA error (exit 99), restart it. The harness is
+    resumable (it skips records already written), so each restart continues past the bad record."""
+    attempt = 0
+    while True:
+        rc = _run_once(cmd, logf)
+        if rc == 0:
+            return
+        attempt += 1
+        if rc == 99 and attempt <= max_restarts:
+            msg = f"[run_all] ratio crashed (fatal CUDA); restart {attempt}/{max_restarts}, resuming...\n"
+            print(msg, end=""); logf.write(msg); logf.flush()
+            continue
+        # non-fatal nonzero, or too many restarts: log and move on to the next ratio
+        msg = f"[run_all] command exited {rc} after {attempt} attempt(s); continuing to next step\n"
+        print(msg, end=""); logf.write(msg); logf.flush()
+        return
 
 
 def main():
@@ -44,6 +62,10 @@ def main():
     ap.add_argument("--per-task", type=int, default=None, help="records per task (default: all 50)")
     ap.add_argument("--tasks", default="", help="comma-separated subset of tasks")
     ap.add_argument("--max-prompt-tokens", type=int, default=None)
+    ap.add_argument("--chunk-prefill", type=int, default=None,
+                    help="prefill long contexts in chunks of this many tokens (enables the full dev set)")
+    ap.add_argument("--skip-baseline", action="store_true",
+                    help="skip the full-cache 'none' run and reuse the shared naive baseline in results/longbench")
     args = ap.parse_args()
     ratios = [float(x) for x in args.compression_ratios.split(",") if x.strip()]
 
@@ -60,6 +82,8 @@ def main():
         common += ["--tasks", args.tasks]
     if args.max_prompt_tokens is not None:
         common += ["--max-prompt-tokens", str(args.max_prompt_tokens)]
+    if args.chunk_prefill is not None:
+        common += ["--chunk-prefill", str(args.chunk_prefill)]
 
     with LOG.open("w", encoding="utf-8") as logf:
         # Full-cache baseline, then a sweep of TriAttention eviction ratios so the

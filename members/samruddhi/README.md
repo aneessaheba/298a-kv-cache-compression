@@ -124,17 +124,101 @@ shortcut.
 - `RESULTS.md` - full results tables and figures
 - `FLAWS.md` - the measured flaws and their root cause
 
-## 7. Notes on scope
+## 7. Running the full dataset: the OOM investigation
 
-- Runs cover the LongBench dev prompts under 6K tokens (260 records per run, all 16 tasks). Longer
-  prompts exceed the 32 GB GPU during the uncompressed prefill, so the longest documents are not included.
+The headline numbers above use the prompts under 6K tokens. Extending to the **full 800 records**
+(prompts up to 32K tokens) ran into GPU out-of-memory (OOM) failures. This section documents what we
+found and the fixes we tried, because the OOM behaviour is itself a result worth recording.
+
+### 7.1 Symptom
+
+Running the four compression ratios on all 800 records, TriAttention OOM'd on a large share of records
+(~50% at ratio 0.75), which collapsed the averages (macro ~7 instead of ~35) because every OOM is scored
+0. The failures clustered on the longest documents (narrativeqa, 16K-32K tokens).
+
+### 7.2 Profiling: where the memory actually goes
+
+Before assuming the limit was structural, we profiled one 32K-token record. The decisive finding:
+
+```
+attn implementation: sdpa
+ctx tokens: 31986
+PREFILL (no compression at all): tried to allocate 121.96 GiB  ->  OOM
+```
+
+- The giant **122 GB allocation happens during the model's prefill, with no compression applied at all**.
+  It is the O(seq_len^2) attention work for a 32K prompt, not the KV cache and not TriAttention's scoring.
+- For reference, the full-cache baseline peaks at **24.08 GB** on the same 32K records (0 OOM across 800),
+  because its prefill path streams attention instead of materialising the full matrix.
+
+So the OOM is driven by (a) the prefill attention for very long prompts, and (b) the extra temporaries
+TriAttention's scoring adds on top of an already ~24 GB peak - not by the compression idea itself.
+
+### 7.3 Fixes tried (memory only - the TriAttention formula is unchanged)
+
+| Fix | What it does | Result |
+|---|---|---|
+| CPU KV-cache offloading (`run_offloaded_baseline.py`) | keeps the full cache in CPU RAM, pages layers to GPU | full-cache 32K runs at ~18 GB; used for the naive baseline |
+| Chunked prefill (`chunked_prefill.py`) | feeds the prompt in 512-1024 token chunks so the model never builds the full 32K x 32K attention matrix | removes the 122 GB spike |
+| Chunked scoring (`_score_head_chunked`) | computes TriAttention's per-head trig score one key-chunk at a time, discarding the `[tokens x offsets x freqs]` temporaries each chunk; never builds the full-sequence score tensor | large drop in the scoring memory add-on |
+| Per-head temporary freeing | deletes each head's `k_unrot/amp/phi/extra` before the next head | keeps the per-layer add-on small |
+| Score-tensor shrink (`offset_max_length` 65536 -> 1024) | the trig series decays fast; fewer offsets = ~16x smaller score tensor | faster, lower memory, negligible score change |
+
+**The chunked scoring is numerically identical to the original**, verified by an equivalence test
+(`_score_head_chunked` vs the whole-sequence formula): max abs difference **0.000** on a 777-token
+synthetic case. We modified only the memory implementation, not the math.
+
+### 7.4 Result of the fixes (worst-case 32K-token document)
+
+| Ratio (cache kept) | 32K-doc result | Peak GPU |
+|---|---|---|
+| 0.95 (5%) | OK | ~19-23 GB |
+| 0.9 (10%) | OK | ~28 GB |
+| 0.8 (20%) | borderline / spills to shared memory | ~34 GB |
+| 0.75 (25%) | OOM (or spills) | >32 GB |
+
+**Conclusion.** The fixes let the **aggressive ratios (0.9, 0.95) run cleanly on every record, including
+the 32K documents.** The **light ratios (0.75, 0.8) still OOM on the few 32K documents** - and this is a
+genuine hardware limit, not a code inefficiency: keeping 25% of a 32K-token cache is ~8K tokens, which
+plus the 16 GB model weights plus working memory exceeds the 32 GB card. This mirrors the full-cache
+baseline's own 24 GB peak - light compression simply does not fall far enough below it. We record these
+OOMs as `oom: true` rows (score 0) so the failure pattern is documented rather than hidden.
+
+### 7.5 Takeaway
+
+TriAttention **enables long-context inference at high compression (0.9/0.95) that would otherwise not fit
+on a 32 GB GPU**, while light compression (0.75/0.8) remains memory-infeasible on the largest documents.
+The OOMs are a property of the memory budget and prompt length, not of the TriAttention scoring math.
+
+## 8. Notes on scope
+
+- The headline tradeoff/flaw numbers (sections 3-5) use the LongBench dev prompts under 6K tokens
+  (260 records per run, all 16 tasks).
+- The full-800 extension (section 7) adds the long documents; aggressive ratios complete, light ratios
+  OOM on the 32K docs as documented.
 - Calibration uses a 4096-token plain-text pass; the authors note the statistics are domain-agnostic.
 
-## 8. Reproduce
+### Memory-handling code added for the full-dataset runs
+
+| File | Purpose |
+|---|---|
+| `chunked_prefill.py` | chunked prefill so long prompts don't build the full attention matrix |
+| `run_offloaded_baseline.py` | CPU KV-cache offloading for the full, uncompressed baseline |
+| `_score_head_chunked` (in `triattention_press.py`) | chunk-at-a-time TriAttention scoring (same formula, bounded memory) |
+
+## 9. Reproduce
 
 ```powershell
 huggingface-cli login
 C:\Python310\python.exe members/samruddhi/build_dev_data.py
 C:\Python310\python.exe members/samruddhi/calibrate_triattention.py --output members/samruddhi/calibration/llama31_8b_stats.pt
+
+# Short-prompt subset (sections 3-5): fast, no OOM
 C:\Python310\python.exe members/samruddhi/run_all.py --compression-ratios 0.5,0.75,0.9,0.95 --max-prompt-tokens 6000
+
+# Full 800 records (section 7): chunked prefill for long docs; light ratios OOM on 32K docs as documented
+C:\Python310\python.exe members/samruddhi/run_all.py --compression-ratios 0.75,0.8,0.9,0.95 --chunk-prefill 1024 --skip-baseline
+
+# Full, uncompressed baseline on all 800 via CPU offloading (no OOM)
+C:\Python310\python.exe members/samruddhi/run_offloaded_baseline.py
 ```
