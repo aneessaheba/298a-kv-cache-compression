@@ -52,7 +52,23 @@ All 800 dev records on the RTX 5090.
 
 Time per record: 1.78 s (median). Peak GPU memory: 24.09 GB. Computed KV cache: 1.357 GB on average.
 
-**Scoring note.** trec, triviaqa and samsum are scored on the first line of the output. Llama often starts these answers with a space and a newline, which LongBench's `eval.py` would read as a blank line, so we strip all leading whitespace first. This changes only triviaqa on the full cache, from 8.00 to 93.20, and moves the average from 42.39 to 47.72. We have not yet compared this baseline with published LongBench numbers.
+**Scoring note.** trec, triviaqa and samsum are scored on the first line of the output. LongBench's `eval.py` strips only leading newlines before taking that line. Llama often starts these answers with a space and then a newline, which leaves the first line blank, so we strip all leading whitespace instead. This changes only triviaqa on the full cache, from 8.00 to 93.20, and moves the average from 42.39 to 47.72.
+
+**Comparison with published numbers (G1, SAM-69).** Two 2024–2026 papers report full-cache LongBench scores for Llama-3.1-8B-Instruct on all 16 English tasks:
+
+| Source | Average | Difference from ours |
+|---|---|---|
+| Ours (800-record dev set, 32K cap) | 47.72 (95% CI 45.76 to 49.85) | |
+| Ada-KV, Feng et al. (arXiv 2407.11550), Table 5 | 49.20 | -1.48 |
+| LKV (arXiv 2605.06676), Table 8 | 47.48 | +0.24 |
+
+Our average is within 2 points of both, and both published averages fall inside our confidence interval, so the baseline passes the G1 gate. Per task, most differences are within our sampling error: with 50 records per task, the 95% interval is about ±10 points on the QA tasks and ±2 on summarization. Three tasks stand out:
+
+- **samsum** is higher for us: 49.31, compared with 43.57 and 36.99. This is likely our leading-whitespace fix, together with running samsum without the chat template, as LongBench does.
+- **lcc and repobench-p** are lower than Ada-KV (by 8.4 and 7.1) but close to LKV. The two papers differ from each other by 12 points on lcc, so code scores depend heavily on the setup.
+- **passage_count** is 4.50, compared with 9.41 and 7.45. It is near zero for every source, and our interval is ±5.5.
+
+Our dev set covers 50 records per task, not the full test set, and prompts are capped at 32K tokens. The published numbers use the full set, so differences of a few points on single tasks are expected.
 
 ## 4. Method results
 
