@@ -28,8 +28,8 @@ Simulation note (same as every other kvpress method in our comparison):
 Deviations from the paper (write these in the report):
   1. eps_u(b) is the *exact* per-unit RMS quantisation error computed online, instead of the
      paper's offline calibrated table (32 LongBench prefixes). Same objective, no calibration set.
-  2. The last `window_size` context tokens are always kept at FP16 (SnapKV convention), and their
-     cost is charged to the V budget.
+  2. The *values* of the last `window_size` context tokens are always kept at FP16 (SnapKV convention)
+     and charged to the V budget. Their *keys* are not exempt: they go through the K channel allocation.
   3. No TriZone packing / Triton kernel (speed is not part of our comparison).
 """
 

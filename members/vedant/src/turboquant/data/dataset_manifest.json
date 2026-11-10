@@ -1,0 +1,56 @@
+{
+  "pipeline_version": "longbench_preprocessing_v1",
+  "source_dataset": "zai-org/LongBench",
+  "source_records": 3750,
+  "clean_records": 3731,
+  "removed_duplicate_document_question_pairs": 19,
+  "development_records": 800,
+  "development_sampling": {
+    "tasks": 16,
+    "records_per_task": 50,
+    "seed": 42,
+    "record_ids_unique": true,
+    "record_ids_match_dev_ids_file": true
+  },
+  "prompt_source": "https://raw.githubusercontent.com/THUDM/LongBench/main/LongBench/config/dataset2prompt.json",
+  "context_cap_tokens": 32000,
+  "truncation_method": "middle_keep_head_tail",
+  "model_and_tokenizer": "meta-llama/Llama-3.1-8B-Instruct",
+  "files": {
+    "processed_longbench.jsonl": {
+      "bytes": 333211298,
+      "records": 3731,
+      "sha256": "106bb65a4111a14993dfc728b8e59798a595e16f6c39bba7e0e1e7a5e3cd1ed6"
+    },
+    "processed_longbench_dev.jsonl": {
+      "bytes": 74299492,
+      "records": 800,
+      "sha256": "fc9d8649f535619c6b3dbe31ad158b112131d85230f92cd253c2e32bb1b7a47c"
+    },
+    "dev_ids.json": {
+      "bytes": 45694,
+      "sha256": "7adb3f9e932374ee72f3f8a1be9104e32f450bca7ebaa560dda066a382d3869f"
+    },
+    "cleaning_log.csv": {
+      "bytes": 540,
+      "sha256": "334e873f37a5f74ac1bb0f0b0cc30fa5b738268e14eb1a583b84129e733c4f2d"
+    },
+    "dqi_before_after.csv": {
+      "bytes": 234,
+      "sha256": "9b9bafb718cba6694b96e5c3db37a781d02d5e98bded319392edfefcac1ca320"
+    },
+    "preprocessing_truncation_summary.csv": {
+      "bytes": 922,
+      "sha256": "06e1599b297caf0615e6f461e6de7ddf705b2de10f0901400388efc8cbf1d53b"
+    },
+    "manifest.json": {
+      "bytes": 2444,
+      "sha256": "0b9f80333e850405f5074034ecde4af925c6b73189d0c0900b66d9eb05497337"
+    }
+  },
+  "audit_notes": [
+    "The 800 development IDs exactly match the 800 unique records in processed_longbench_dev.jsonl; file order differs from dev_ids.json.",
+    "The preprocessing summary leaves token statistics blank for lcc and repobench-p; generation uses the prompt_tokens fields embedded in each processed record.",
+    "The 19-record duplicate removal changes the benchmark population and must be disclosed in the report."
+  ]
+}

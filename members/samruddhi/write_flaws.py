@@ -18,8 +18,12 @@ exist yet, the script refuses to write anything rather than invent flaws.
 import csv
 from pathlib import Path
 
+import os
+
 HERE = Path(__file__).resolve().parent
-OUT = HERE / "results_out"
+# Match analyze_results: each experiment keeps its own outputs (override with SAM_OUT_DIR).
+OUT = Path(os.environ.get("SAM_OUT_DIR", str(HERE / "results_out")))
+DOC_DIR = HERE
 PER_TASK = OUT / "per_task_summary.csv"
 RUN = OUT / "run_summary.csv"
 
@@ -175,8 +179,9 @@ def main():
                  "per run, all 16 tasks). Longer prompts exceed the 32 GB GPU during the uncompressed "
                  "prefill, so the longest-document examples are not included.\n")
 
-    (HERE / "FLAWS.md").write_text("\n".join(lines), encoding="utf-8")
-    print(f"wrote {HERE / 'FLAWS.md'} from measured results")
+    DOC_DIR.mkdir(parents=True, exist_ok=True)
+    (DOC_DIR / "FLAWS.md").write_text("\n".join(lines), encoding="utf-8")
+    print(f"wrote {DOC_DIR / 'FLAWS.md'} from measured results")
     print(f"  worst task: {deltas[0][0]} ({deltas[0][3]:+.2f})  worst category: {worst_cat}")
 
 

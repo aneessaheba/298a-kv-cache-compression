@@ -9,7 +9,8 @@ bit allocation. No official code is public, so `rdkv_press.py` is our re-impleme
 | `rdkv_press.py` | `RDKVPress`, registered as `--press rdkv` in `harness/run_longbench.py` |
 | `test_rdkv.py` | CPU unit tests (allocator hits each budget, end-to-end on a tiny random Llama). `python -m pytest -q members/manjot/test_rdkv.py` |
 | `compare.py` | Paired per-task comparison of any run against the full-cache baseline |
-| `kaggle_rdkv.ipynb` | Kaggle 2xT4 notebook: setup, tests, data rebuild, smoke run, fp16 check, full runs |
+| `kaggle_rdkv.ipynb` | Kaggle 2xT4 notebook (fp16 side check only, not the main table): setup, tests, data rebuild, smoke run, fp16 check, full runs |
+| `colab_rdkv.ipynb` | Colab A100 notebook for the reported results: clones this branch, pins `transformers==5.2.0`, bf16 on one GPU (the baseline's setup); results saved to Drive, resumes after disconnects |
 
 ## Running
 
@@ -34,10 +35,12 @@ the 5090, so about 6 h per ratio.
 
 ## Memory accounting
 
-RDKV's budget is in bits: each KV head gets (1 - ratio) x T x d x 16 bits for V and the same for K (the paper's r_K = 0.5).
-So the payload equals the harness's `kv_cache_gb` formula exactly, and RDKV results compare directly on that column.
-Each row also stores RDKV's own numbers: `rdkv_context_gb` (context cache including quantizer metadata such as
-fp16 scale/zero-point and keep bitmaps), `rdkv_context_gb_payload`, and `rdkv_kept_fraction_bits` / `_tokens`.
+RDKV's budget is in bits: each KV head gets (1 - ratio) x T x d x 16 bits for V and the same for K (the paper's r_K = 0.5),
+so the payload matches the harness's `kv_cache_gb` formula. **For memory comparisons use `rdkv_kv_cache_gb`**: the context
+cache *including* quantizer metadata (fp16 scale/zero-point per quantized token or channel, keep bitmaps) plus the
+uncompressed question tokens, counted the same way as the baseline's `kv_cache_gb`. Other per-row fields:
+`rdkv_context_gb` (context only, with metadata), `rdkv_context_gb_payload` (context only, without metadata) and
+`rdkv_kept_fraction_bits` / `_tokens`.
 
 ## How the implementation works (for the report)
 Once, at the end of prefill, per layer and KV head:
@@ -50,7 +53,7 @@ Budget per head = (1−r)·T·d·16 bits for V and the same for K (paper's r_K =
 
 **Deviations from the paper (state them honestly):**
 - ε_u(b) is the exact per-unit RMS quantisation error computed online, not the paper's offline calibrated table.
-- The last 32 context tokens are always kept at FP16 (SnapKV convention), charged to the budget.
+- The **values** of the last 32 context tokens are always kept at FP16 (SnapKV convention) and charged to the V budget. Their **keys** are not exempt: they go through the per-channel K allocation like every other kept token.
 - No TriZone packing / Triton kernels: quantisation is simulated (quantise→dequantise) and eviction is masked, so
   physical GPU memory doesn't drop — same as KVzip/RestoreKV in our comparison; we report computed size.
 - Uniform budget per head and layer, as in the paper.
