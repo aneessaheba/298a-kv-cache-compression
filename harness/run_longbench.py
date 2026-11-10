@@ -17,11 +17,16 @@ at the repo root (unzip Samruddhi's processed_longbench.zip there).
 
 import argparse
 import json
+import os
 import re
 import time
 from pathlib import Path
 
-import torch
+# Let the CUDA allocator grow segments instead of fragmenting: on 15 GB T4s, ~2 GB was stranded as
+# "reserved but unallocated" and long prompts ran out of memory. Must be set before torch touches CUDA.
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+import torch  # noqa: E402
 from transformers import pipeline
 
 import sys
@@ -60,6 +65,10 @@ def generate_chunked(pipe, context, question, answer_prefix, press, ratio, max_n
 sys.path.insert(0, str(REPO / "members" / "anees"))
 from quantized_restorekv_press import QuantizedRestoreKVPress  # noqa: E402
 
+# Manjot's RDKV press (joint eviction + mixed-precision quantization, no public code).
+sys.path.insert(0, str(REPO / "members" / "manjot"))
+from rdkv_press import RDKVPress  # noqa: E402
+
 # Vedant's TurboQuant: uniform/mixed rates, QJL-off ablations, or calibrated layer rates.
 # It quantizes the whole document, so --compression-ratio is not used.
 TURBOQUANT = re.compile(r"turboquant_(mse_)?(2(?:\.5)?|3(?:\.5)?|4)bit")
@@ -92,10 +101,27 @@ def make_press(name, compression_ratio, layer_config=None):
         "kvzip": KVzipPress,
         "restorekv": RestoreKVPress,
         "triattention": TriAttentionPress,
+        "rdkv": RDKVPress,
     }
     if name not in presses:
         raise ValueError(f"unknown press: {name}")
     return presses[name](compression_ratio=compression_ratio)
+
+
+def avoid_sdpa_gqa_on_old_gpus():
+    """On GPUs older than Ampere (e.g. T4), torch's SDPA has no fused kernel for grouped-query attention
+    (enable_gqa=True), so it silently falls back to the math kernel, which builds the full fp32 attention
+    matrix (~37 GB at 17K tokens) and runs out of memory. Expanding the KV heads first (repeat_kv) lets the
+    memory-efficient kernel run instead; the result is mathematically the same."""
+    if not torch.cuda.is_available() or torch.cuda.get_device_capability(0)[0] >= 8:
+        return
+    try:
+        import transformers.integrations.sdpa_attention as sdpa_attention
+    except ImportError:
+        return
+    if hasattr(sdpa_attention, "use_gqa_in_sdpa"):
+        sdpa_attention.use_gqa_in_sdpa = lambda *args, **kwargs: False
+        print("pre-Ampere GPU: SDPA grouped-query fast path disabled (KV heads expanded instead)")
 
 
 def kv_bytes_per_token(config, bytes_per_value=2):
@@ -139,7 +165,7 @@ def main():
     parser.add_argument("--model", default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument("--data", default=str(DEFAULT_DATA))
     parser.add_argument("--press", default="none",
-                        help="none, snapkv, kvzip, restorekv, restorekv_4bit, restorekv_2bit, "
+                        help="none, snapkv, kvzip, restorekv, restorekv_4bit, restorekv_2bit, triattention, rdkv, "
                              "turboquant_[mse_]{2,2.5,3,3.5,4}bit or turboquant_adaptive")
     parser.add_argument("--turboquant-layer-config", type=Path)
     parser.add_argument("--compression-ratio", type=float, default=0.0, help="fraction of the KV cache removed")
@@ -147,6 +173,15 @@ def main():
     parser.add_argument("--per-task", type=int, default=None, help="records per task (default: all)")
     parser.add_argument("--max-prompt-tokens", type=int, default=None,
                         help="skip longer records, for quick runs on a laptop")
+    parser.add_argument("--dtype", default="bfloat16", choices=["bfloat16", "float16"],
+                        help="model dtype; use float16 on GPUs without bf16 (e.g. T4)")
+    parser.add_argument("--device-map", default=None,
+                        help="e.g. 'auto' to split the model over several GPUs (Kaggle 2xT4); default: one device")
+    parser.add_argument("--max-gpu-mem", type=float, default=None,
+                        help="with --device-map: GiB of weights allowed per GPU, leaving the rest for activations "
+                             "(e.g. 8.5 on 2x T4)")
+    parser.add_argument("--out-tag", default="",
+                        help="suffix for the output file name, e.g. _fp16check, so test runs don't mix with real ones")
     parser.add_argument("--chunk-prefill", type=int, default=None,
                         help="prefill the context in chunks of this many tokens so long prompts fit in "
                              "GPU memory (enables the full dev set). Compression is applied after each chunk.")
@@ -163,7 +198,7 @@ def main():
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     ratio = args.compression_ratio if args.press != "none" else 0.0
-    out_file = args.output_dir / f"{args.model.split('/')[-1]}_{args.press}_{ratio}.jsonl"
+    out_file = args.output_dir / f"{args.model.split('/')[-1]}_{args.press}_{ratio}{args.out_tag}.jsonl"
     run_fingerprint = None
     if args.press.startswith("turboquant_"):
         import hashlib
@@ -190,9 +225,22 @@ def main():
     todo = [r for r in records if r["record_id"] not in done]
 
     device = pick_device()
+    avoid_sdpa_gqa_on_old_gpus()
     print(f"device={device}  model={args.model}  press={args.press}  ratio={ratio}  "
           f"records={len(records)} ({len(done)} already done)")
-    pipe = pipeline("kv-press-text-generation", model=args.model, device=device, dtype=torch.bfloat16)
+    dtype = getattr(torch, args.dtype)
+    if args.device_map:
+        # memory-efficient attention; without it some setups (e.g. Kaggle T4) fall back to eager attention,
+        # which builds the full attention matrix and runs out of memory on long prompts
+        model_kwargs = {"attn_implementation": "sdpa"}
+        if args.max_gpu_mem:
+            model_kwargs["max_memory"] = {i: f"{args.max_gpu_mem}GiB" for i in range(torch.cuda.device_count())}
+        pipe = pipeline("kv-press-text-generation", model=args.model, device_map=args.device_map, dtype=dtype,
+                        model_kwargs=model_kwargs)
+    else:
+        pipe = pipeline("kv-press-text-generation", model=args.model, device=device, dtype=dtype)
+    n_gpus = torch.cuda.device_count() if device == "cuda" else 0
+    print("attention implementation:", getattr(pipe.model.config, "_attn_implementation", "?"))
     if done and args.press.startswith("turboquant_"):
         saved_revisions = {json.loads(line).get("model_revision") for line in out_file.open()}
         if saved_revisions != {getattr(pipe.model.config, "_commit_hash", None)}:
@@ -214,8 +262,8 @@ def main():
             answer_prefix = ""
             if no_template:
                 question, answer_prefix = longbench.split_answer_cue(question)
-            if device == "cuda":
-                torch.cuda.reset_peak_memory_stats()
+            for d in range(n_gpus):
+                torch.cuda.reset_peak_memory_stats(d)
             start = time.perf_counter()
             fatal = False
             try:
@@ -238,6 +286,7 @@ def main():
                 is_oom = "out of memory" in msg.lower() or isinstance(e, torch.cuda.OutOfMemoryError)
                 if not is_oom:
                     raise
+                print("OOM detail:", msg.splitlines()[0][:300] if msg else type(e).__name__)
                 prediction = ""
                 oom = True
                 print(f"[{i}/{len(todo)}] {record['task']:20s} OOM at {record['prompt_tokens_after']} tok "
@@ -264,7 +313,8 @@ def main():
             except Exception:
                 kvgb = None
             try:
-                peak = round(torch.cuda.max_memory_allocated() / 1e9, 2) if (device == "cuda" and not fatal) else None
+                peak = (round(sum(torch.cuda.max_memory_allocated(d) for d in range(n_gpus)) / 1e9, 2)
+                        if (device == "cuda" and not fatal) else None)  # summed over GPUs with --device-map
             except Exception:
                 peak = None
             row = {
@@ -288,6 +338,21 @@ def main():
                 row["scoring_policy"] = "team-shared-harness-rapidfuzz"
                 row["run_fingerprint"] = run_fingerprint
                 row["model_revision"] = getattr(pipe.model.config, "_commit_hash", None)
+            if args.press == "rdkv" and not oom:
+                # RDKV's own accounting: payload hits the ratio exactly in bits; this adds the
+                # quantizer metadata (scales/zero-points, keep bitmaps) on top. Context only.
+                s = press.summary()
+                row["rdkv_context_gb"] = round(s["kv_cache_gb"], 4)
+                row["rdkv_context_gb_payload"] = round(s["kv_cache_gb_payload"], 4)
+                row["rdkv_kept_fraction_bits"] = round(s["kept_fraction_bits"], 4)
+                row["rdkv_kept_fraction_tokens"] = round(s["kept_fraction_tokens"], 4)
+                # Like kv_cache_gb (compressed context + uncompressed question), but with RDKV's real
+                # context size including metadata: the number to compare against the baseline.
+                n_question = len(pipe.tokenizer(question + answer_prefix, add_special_tokens=False).input_ids)
+                row["rdkv_kv_cache_gb"] = round(s["kv_cache_gb"]
+                                                + n_question * kv_bytes_per_token(pipe.model.config) / 1e9, 4)
+            if args.dtype != "bfloat16" or args.device_map:
+                row["run_config"] = f"{args.dtype},{args.device_map or device}"
             out.write(json.dumps(row) + "\n")
             out.flush()
             if not oom:
