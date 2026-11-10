@@ -163,7 +163,9 @@ def main():
                     prediction = pipe(context, question=question, answer_prefix=answer_prefix, press=press,
                                       max_new_tokens=longbench.MAX_NEW_TOKENS[record["task"]])["answer"]
                 oom = False
-            except (torch.cuda.OutOfMemoryError, torch.AcceleratorError, RuntimeError) as e:
+            # torch.AcceleratorError (torch >= 2.8) is a RuntimeError, so RuntimeError covers it;
+            # naming it directly breaks every OOM on the lab image's torch 2.7.1, which lacks it.
+            except RuntimeError as e:
                 # Record the failure instead of crashing the whole run. A plain OutOfMemoryError
                 # is recoverable in-process; a harder CUDA AcceleratorError corrupts the context,
                 # so we re-raise it and let the orchestrator (run_all.py) restart this ratio and
