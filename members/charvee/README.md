@@ -26,15 +26,3 @@ Results go to `results/residualkv/longbench/`. If the machine stops, run the sam
 ## Memory
 
 ResidualKV keeps layers 0, 1, 2, 8 and 18 whole (4-bit), plus 8 sink and 128 recent tokens, and stores compressed residuals for dropped tokens. So `--compression-ratio 0.9` is **not** a 10% cache. Each record logs the bytes actually held in its cache (`kv_cache_gb`) and the bf16 size of a full cache for the same tokens (`full_kv_cache_gb`). Compare methods on `kv_cache_gb`.
-
-## Differences from the shared harness
-
-- ResidualKV compresses the whole prompt, keeping the last 128 tokens, which usually include the question. kvpress methods compress only the document.
-- The attention kernel is PyTorch's `sdpa`, because the lab image has no flash-attn.
-
-## Status
-
-- [ ] Quick check on the lab GPU
-- [ ] Full runs at 0.75 and 0.9
-- [ ] Full runs at 0.8 and 0.95
-- [ ] Results table and report section
