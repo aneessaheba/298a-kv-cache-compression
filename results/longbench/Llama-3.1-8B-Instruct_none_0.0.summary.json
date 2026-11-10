@@ -1,28 +1,32 @@
 {
   "args": {
     "model": "meta-llama/Llama-3.1-8B-Instruct",
-    "data": "C:\\Users\\samm\\Documents\\Samruddhi\\298a-kv-cache-compression\\data\\processed_longbench\\processed_longbench_dev.jsonl",
+    "data": "/app/298a-kv-cache-compression/data/processed_longbench/processed_longbench_dev.jsonl",
     "press": "none",
     "compression_ratio": 0.0,
     "tasks": "",
     "per_task": null,
-    "max_prompt_tokens": 6000
+    "max_prompt_tokens": null
   },
   "device": "cuda",
-  "n_records": 260,
+  "n_records": 800,
   "scores": {
-    "qasper": 40.88,
-    "multifieldqa_en": 58.37,
-    "hotpotqa": 66.67,
-    "2wikimqa": 52.68,
-    "gov_report": 35.93,
-    "qmsum": 23.19,
-    "multi_news": 27.28,
-    "trec": 60.0,
-    "triviaqa": 30.0,
-    "samsum": 42.78,
-    "lcc": 53.91,
-    "repobench-p": 51.19,
-    "average": 45.24
+    "narrativeqa": 35.47,
+    "qasper": 41.63,
+    "multifieldqa_en": 54.85,
+    "hotpotqa": 52.72,
+    "2wikimqa": 45.53,
+    "musique": 26.5,
+    "gov_report": 33.88,
+    "qmsum": 25.06,
+    "multi_news": 27.01,
+    "trec": 70.0,
+    "triviaqa": 93.2,
+    "samsum": 49.31,
+    "passage_count": 4.5,
+    "passage_retrieval_en": 100.0,
+    "lcc": 54.46,
+    "repobench-p": 49.33,
+    "average": 47.72
   }
 }
