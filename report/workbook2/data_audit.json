@@ -1,0 +1,388 @@
+{
+  "raw_records": 3750,
+  "clean_records": 3731,
+  "dev_records": 800,
+  "full_columns": 21,
+  "raw_columns": 8,
+  "dev_sha256": "fc9d8649f535619c6b3dbe31ad158b112131d85230f92cd253c2e32bb1b7a47c",
+  "full_sha256": "106bb65a4111a14993dfc728b8e59798a595e16f6c39bba7e0e1e7a5e3cd1ed6",
+  "raw_zip_sha256": "cb45b11a4133c6bc1d6a44b0f8e701335ff1e543195db1103472e575857f7f64",
+  "duplicate_ids_raw": 0,
+  "duplicate_clean_pairs": 0,
+  "removed_ids": [
+    "0431126a12d83a266d88603f505ac4f1014bcb3d8cc02c10",
+    "0a567230f3e2096d313699858dc654ee517ed5acbc9d96ce",
+    "0f21dd0fa76866f8616c3241e94707bb5096f62eac7b22d7",
+    "19ec182d75e69f6f85cc7a4fa8f9ca22b124800bc8736b1d",
+    "1cf24ba18f6900bb1f182594f614a8da725a8467d6255e08",
+    "3cef32e4b61eee93ced7c533804485d3c49ee09560b72120",
+    "6400c535cd592c9e7e30d15803baa5c7f98e2c06e7ea1da6",
+    "73b9b4130b4a4931bed5ea7e24331ce61b59271eac6c6c01",
+    "7efd1cc4cce3770765ac6c7304b68cfe28c83aec18c01577",
+    "979294831f2e204dd0340f8017a76400d0e67bf7feb92629",
+    "a3bfcf39ca219cf1af8a91c3f3e30bdcf3f16f7f8f0f1adb",
+    "a4f3fcfc5fd3a7c726e59cebfa848065b74902ab3517fdff",
+    "a813ddeac39b98eaa48da96b448ec147298ac8b1f370f212",
+    "aab61294906308c2c4f4410552bfe47885450370839736ad",
+    "cf6cd2d8526658bac5ee4a39bc0237021c54eec652d27d1b",
+    "cfc986e72c167c2a8f3bff0498f2f2234bfa038cc8ca9f7f",
+    "d41b617b77c8dddd9d04661856245994ab1c78e88b111632",
+    "d4bc46084679d5f1301df1a824097be4c5c47203e0ca2682",
+    "fbeb825de92309788269da33aa6bd189c7b1d46b997746f4"
+  ],
+  "task_stats": {
+    "2wikimqa": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 6349.0
+    },
+    "gov_report": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 3,
+      "truncated_dev": 2,
+      "median_tokens": 8711.5
+    },
+    "hotpotqa": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 14279.0
+    },
+    "lcc": {
+      "raw": 500,
+      "clean": 500,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 2279.0
+    },
+    "multi_news": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 2039.0
+    },
+    "multifieldqa_en": {
+      "raw": 150,
+      "clean": 149,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 6996.0
+    },
+    "musique": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 16179.0
+    },
+    "narrativeqa": {
+      "raw": 200,
+      "clean": 182,
+      "dev": 50,
+      "truncated_full": 79,
+      "truncated_dev": 18,
+      "median_tokens": 31399.0
+    },
+    "passage_count": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 15454.5
+    },
+    "passage_retrieval_en": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 12488.5
+    },
+    "qasper": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 4701.5
+    },
+    "qmsum": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 13000.5
+    },
+    "repobench-p": {
+      "raw": 500,
+      "clean": 500,
+      "dev": 50,
+      "truncated_full": 6,
+      "truncated_dev": 1,
+      "median_tokens": 9186.5
+    },
+    "samsum": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 9355.5
+    },
+    "trec": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 6820.0
+    },
+    "triviaqa": {
+      "raw": 200,
+      "clean": 200,
+      "dev": 50,
+      "truncated_full": 0,
+      "truncated_dev": 0,
+      "median_tokens": 11804.0
+    }
+  },
+  "dev_tokens_mean": 10355.845,
+  "dev_tokens_median": 9474.5,
+  "full_tokens_max": 32000,
+  "raw_required_context_missing": 0,
+  "adaptive_overlap": {
+    "unique_contexts_shared": 4,
+    "left_records_with_shared_context": 4,
+    "right_records_with_shared_context": 8
+  },
+  "dev_vs_remaining_overlap": {
+    "unique_contexts_shared": 78,
+    "left_records_with_shared_context": 134,
+    "right_records_with_shared_context": 275
+  },
+  "samples": [
+    {
+      "id": "91dd7b7a6ead4025763812d70dc51c6674b0acf31bd5a5f0",
+      "task": "qasper",
+      "raw_keys": [
+        "input",
+        "context",
+        "answers",
+        "length",
+        "dataset",
+        "language",
+        "all_classes",
+        "_id",
+        "task"
+      ],
+      "raw_input": "How does their ensemble method work?",
+      "raw_context_excerpt": "Introduction Since humans amass more and more generally available data in the form of",
+      "raw_answers": [
+        "simply averaging the predictions from the constituent single models"
+      ],
+      "clean_input": "How does their ensemble method work?",
+      "clean_answers": [
+        "simply averaging the predictions from the constituent single models"
+      ],
+      "transformed_keys": [
+        "record_id",
+        "task",
+        "category",
+        "metric",
+        "split",
+        "language",
+        "dataset",
+        "input",
+        "context",
+        "answers",
+        "all_classes",
+        "prompt",
+        "source_length_words",
+        "context_words",
+        "input_words",
+        "prompt_words",
+        "prompt_tokens_before",
+        "prompt_tokens_after",
+        "truncated",
+        "truncation_method",
+        "pipeline_version"
+      ],
+      "tokens_before": 5321,
+      "tokens_after": 5321,
+      "truncated": false,
+      "prompt_prefix": "You are given a scientific article and a question. Answer the question as concisely as you can, using",
+      "split": "dev"
+    },
+    {
+      "id": "e55a65ad534b2649ceccf41cdcba863db7774efbd1408eed",
+      "task": "trec",
+      "raw_keys": [
+        "input",
+        "context",
+        "answers",
+        "length",
+        "dataset",
+        "language",
+        "all_classes",
+        "_id",
+        "task"
+      ],
+      "raw_input": "Question: What is the effect of volcanoes on the climate ?\nType:",
+      "raw_context_excerpt": "Question: What botanical marvel did Nebuchadnezzar build ? Type: Other location Question: What is",
+      "raw_answers": [
+        "Description of something"
+      ],
+      "clean_input": "Question: What is the effect of volcanoes on the climate ?\nType:",
+      "clean_answers": [
+        "Description of something"
+      ],
+      "transformed_keys": [
+        "record_id",
+        "task",
+        "category",
+        "metric",
+        "split",
+        "language",
+        "dataset",
+        "input",
+        "context",
+        "answers",
+        "all_classes",
+        "prompt",
+        "source_length_words",
+        "context_words",
+        "input_words",
+        "prompt_words",
+        "prompt_tokens_before",
+        "prompt_tokens_after",
+        "truncated",
+        "truncation_method",
+        "pipeline_version"
+      ],
+      "tokens_before": 3452,
+      "tokens_after": 3452,
+      "truncated": false,
+      "prompt_prefix": "Please determine the type of the question below. Here are some examples of questions. Question: What botanical marvel",
+      "split": "dev"
+    },
+    {
+      "id": "28ce5cf5e0beeb47248c6cba20ae17fa71d60d402770d464",
+      "task": "lcc",
+      "raw_keys": [
+        "input",
+        "context",
+        "answers",
+        "length",
+        "dataset",
+        "language",
+        "all_classes",
+        "_id",
+        "task"
+      ],
+      "raw_input": "",
+      "raw_context_excerpt": "using System; using System.Collections; using System.Collections.Generic; using Server.Commands; using Server.Engines.PartySystem; using Server.Factions; using Server.Gumps;",
+      "raw_answers": [
+        "\t\t\t\tParticipant p = (Participant)m_Participants[i];"
+      ],
+      "clean_input": "",
+      "clean_answers": [
+        "Participant p = (Participant)m_Participants[i];"
+      ],
+      "transformed_keys": [
+        "record_id",
+        "task",
+        "category",
+        "metric",
+        "split",
+        "language",
+        "dataset",
+        "input",
+        "context",
+        "answers",
+        "all_classes",
+        "prompt",
+        "source_length_words",
+        "context_words",
+        "input_words",
+        "prompt_words",
+        "prompt_tokens_before",
+        "prompt_tokens_after",
+        "truncated",
+        "truncation_method",
+        "pipeline_version"
+      ],
+      "tokens_before": 11436,
+      "tokens_after": 11436,
+      "truncated": false,
+      "prompt_prefix": "Please complete the code given below. using System; using System.Collections; using System.Collections.Generic; using Server.Commands; using Server.Engines.PartySystem; using Server.Factions;",
+      "split": "dev"
+    }
+  ],
+  "normalization_example": [
+    {
+      "id": "f9cfda8abcc78f9e2f492d4f58ee4996430e9a8911e29726",
+      "task": "narrativeqa",
+      "field": "context",
+      "raw_prefix": "'\\t\\t\\t\\t\\t\\tGhostbusters II\\n\\n\\t\\t\\t\\t\\t\\t\\tby\\n\\t\\t\\t\\t\\t\\tHarold Ramis\\n\\t\\t\\t\\t\\t\\t\\tand\\n\\t\\t\\t\\t\\t\\tDan Aykroyd\\n\\n\\t\\t\\t\\t\\t September 29'",
+      "clean_prefix": "'Ghostbusters II\\n\\n\\t\\t\\t\\t\\t\\t\\tby\\n\\t\\t\\t\\t\\t\\tHarold Ramis\\n\\t\\t\\t\\t\\t\\t\\tand\\n\\t\\t\\t\\t\\t\\tDan Aykroyd\\n\\n\\t\\t\\t\\t\\t September 29, 1988'",
+      "raw_suffix": "'hining sea beyond.\\n\\n<b>\\t\\t\\t\\t\\t\\t\\t\\t\\t\\t\\tFADE OUT.\\n</b>\\n<b>\\t\\t\\t\\t\\t\\tTHE END\\n</b>'",
+      "clean_suffix": "'hining sea beyond.\\n\\n<b>\\t\\t\\t\\t\\t\\t\\t\\t\\t\\t\\tFADE OUT.\\n</b>\\n<b>\\t\\t\\t\\t\\t\\tTHE END\\n</b>'"
+    }
+  ],
+  "tri_tasks": [
+    "2wikimqa",
+    "gov_report",
+    "hotpotqa",
+    "lcc",
+    "multi_news",
+    "multifieldqa_en",
+    "qasper",
+    "qmsum",
+    "repobench-p",
+    "samsum",
+    "trec",
+    "triviaqa"
+  ],
+  "tri_unique_records": 260,
+  "tri_actual_max_prompt_tokens": 5973,
+  "metadata_schema": [
+    "record_id",
+    "task",
+    "category",
+    "metric",
+    "split",
+    "language",
+    "dataset",
+    "input",
+    "context",
+    "answers",
+    "all_classes",
+    "prompt",
+    "source_length_words",
+    "context_words",
+    "input_words",
+    "prompt_words",
+    "prompt_tokens_before",
+    "prompt_tokens_after",
+    "truncated",
+    "truncation_method",
+    "pipeline_version"
+  ],
+  "dev_truncated": 21,
+  "full_truncated": 88,
+  "dev_context_word_token_pearson": 0.9485681712974929
+}

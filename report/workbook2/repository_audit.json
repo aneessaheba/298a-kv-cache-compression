@@ -1,0 +1,53 @@
+{
+  "main_snapshot": "39a10977bc52deab9dce195a66a5a8c1bf968352",
+  "turboquant_evidence": "9dc0d48b7a3f2a4c723ef7539f1270a70a899643",
+  "restorekv_results": [
+    {
+      "file": "results/restorekv/longbench/Llama-3.1-8B-Instruct_restorekv_0.9.jsonl",
+      "records": 800,
+      "unique_ids": 800,
+      "oom": 0
+    },
+    {
+      "file": "results/restorekv/longbench/Llama-3.1-8B-Instruct_restorekv_0.8.jsonl",
+      "records": 800,
+      "unique_ids": 800,
+      "oom": 0
+    },
+    {
+      "file": "results/restorekv/longbench/Llama-3.1-8B-Instruct_restorekv_0.75.jsonl",
+      "records": 800,
+      "unique_ids": 800,
+      "oom": 0
+    },
+    {
+      "file": "results/restorekv/longbench/Llama-3.1-8B-Instruct_restorekv_0.95.jsonl",
+      "records": 800,
+      "unique_ids": 800,
+      "oom": 0
+    },
+    {
+      "file": "results/restorekv/ruler/Llama-3.1-8B-Instruct_4096_none_0.0.jsonl",
+      "records": 650
+    },
+    {
+      "file": "results/restorekv/ruler/Llama-3.1-8B-Instruct_4096_kvzip_0.95.jsonl",
+      "records": 650
+    },
+    {
+      "file": "results/restorekv/ruler/Llama-3.1-8B-Instruct_4096_restorekv_0.95.jsonl",
+      "records": 650
+    }
+  ],
+  "method_entries": {
+    "anees": "members/anees/README.md",
+    "vedant": "members/vedant/results/sem1/analysis/RESULTS.md",
+    "samruddhi": "members/samruddhi/results_out/run_summary.csv",
+    "charvee": "members/charvee/run_residualkv.py",
+    "manjot": "members/manjot/rdkv_press.py"
+  },
+  "baseline_records": 800,
+  "triattention_records_per_setting": 260,
+  "triattention_tasks": 12,
+  "rdkv_residualkv_shared_results_in_snapshot": false
+}
