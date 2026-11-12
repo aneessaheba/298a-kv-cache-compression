@@ -1,6 +1,8 @@
 # TurboQuant — Team 6 reference implementation
 
-Version 0.3.0. The numerical quantizers and shared-harness integration are implemented. RTX 5090 / Llama-3.1-8B quality and systems measurements remain pending. No GPU result is implied by local tests.
+Version 0.3.0. The reference implementation and Semester 1 RTX 5090 experiments are complete: nine fixed settings (7,200 predictions), one adaptive experiment (800 predictions), and 512 real-KV calibration layer reports. All recorded predictions independently re-score without mismatches. See [verified results and charts](results/sem1/analysis/RESULTS.md), [Workbook 2 contribution](docs/WORKBOOK_2_CONTRIBUTION.md), and [evidence/procedure](results/sem1/README.md).
+
+The adaptive allocator selected 3-bit QJL in all 32 layers; no adaptive quality improvement is established. Packed-cache size is computed; reconstructed BF16 remains resident, so these experiments do not demonstrate physical VRAM savings or serving speedups.
 
 ## Canonical team run
 
@@ -55,6 +57,6 @@ This validates all 800 IDs/tasks, explicitly converts scores to percentage point
 
 [Adaptive calibration](docs/ADAPTIVE_TURBOQUANT.md) uses real post-RoPE queries, shared prompt formatting, bounded 4K head/tail windows and a dimensionless normalized reconstruction objective. It is experimental; the bounded window and QK proxy limitations are explicit. Its layer allocation also runs through the shared press.
 
-The isolated local check passed 70 tests with Transformers 5.2.0 and kvpress 0.5.5 on CPU/Mac (Torch 2.14.1, Python 3.12). These cover cache construction, exact prefill logits, no repeated prompt unpack, mixed rates/accounting, actual shared pipeline behavior, adaptive configuration and resume/paired reporting. They do not validate the lab's CUDA kernels or full 8B run. Older synthetic G3 artifacts remain synthetic numerical evidence only.
+The earlier isolated local check passed 70 tests with Transformers 5.2.0 and kvpress 0.5.5 on CPU/Mac (Torch 2.14.1, Python 3.12). These cover cache construction, exact prefill logits, no repeated prompt unpack, mixed rates/accounting, actual shared pipeline behavior, adaptive configuration and resume/paired reporting. Those tiny local tests are distinct from the now archived full 8B GPU experiment evidence. Older synthetic G3 artifacts remain synthetic numerical evidence only.
 
 Read [fix audit](docs/REVIEW_FIXES.md) for review-item status. Historical standalone scripts remain diagnostic tools; use the shared runner for team comparisons.

@@ -8,7 +8,7 @@ Audited against the supplied Drive `vedant_turboquant_fixes.md` (all 18 items), 
 | 2. Prefill precision | Original current K/V returned; stored future K/V quantized. Tiny Llama prefill logits match DynamicCache exactly. |
 | 3. Repeated unpack | Decoded chunks reused. A 4K prompt plus three decode tokens observes unpack lengths [4096,1,1,1]; retained copy equals full dequantization. |
 | 4. Shared harness | All ten uniform/mixed/QJL variants plus adaptive are tested through an actual tiny BF16 kvpress pipeline. Compression occurs only for the document. Shared CLI tests writing, OOM failure, summary and strict resume. |
-| 5. Keep lab Torch | System-site venv, runtime constraints, editable install without dependency replacement. Actual CUDA setup execution remains pending. |
+| 5. Keep lab Torch | System-site venv, runtime constraints, editable install without dependency replacement; actual lab execution is now archived under results/sem1. |
 | 6. BF16 defaults | Canonical runner, extractor and experiment scripts use BF16. FP16 vector norm metadata is intentional representation overhead. |
 | 7. Correct documentation | 800-record / 47.72 baseline and shared rapidfuzz scorer are canonical; historical standalone fuzzywuzzy policy is separated. |
 | 8. Fractional settings | Independent outlier/nonoutlier subgroup quantizers at 2.5/3.5 bits; selectors and both subgroup norm fields counted. Main matrix starts with fractional rates. Exact allocation interpretation is disclosed below. |
@@ -33,7 +33,7 @@ Audited against the supplied Drive `vedant_turboquant_fixes.md` (all 18 items), 
 - Shell syntax and Python compilation pass. Source distribution and wheel builds pass.
 - Main matrix contains ten bit/QJL settings, including 2-bit QJL-off; smoke outputs stay separate from full-run outputs.
 
-## Qualifications and pending lab evidence
+## Qualifications and completed lab evidence
 
 **Fractional allocation:** the paper's section 4.3 prints `(32×3+96×2)/128=2.5`, but that expression is 2.25. It does not specify an unambiguous 3.5-bit split or exact selection algorithm. Our documented strategy ranks original channels by document-only energy and assigns the top 64/128 channels the higher bit width. This gives exact 2.5/3.5 nominal rates; it is an implementation interpretation, not an exact reproduction of an unspecified recipe. Source: https://arxiv.org/html/2504.19874v1#S4.SS3
 
@@ -41,7 +41,7 @@ Audited against the supplied Drive `vedant_turboquant_fixes.md` (all 18 items), 
 
 **Physical memory:** the press and reference cache retain decoded BF16 buffers. Logical packed bytes count codes, norm fields, selectors and protected question overhead; dense quantizer state is separate. These do not establish physical VRAM savings or faster serving.
 
-**Not yet executed:** the actual Python 3.11.13 / Torch 2.7.1+cu128 RTX 5090 image, GPU setup, 32-record smoke, full Llama-3.1-8B runs, real-model adaptive calibration, quality scores and CUDA time/memory measurements. Passing tiny CPU pipeline tests is not a substitute. Follow GPU_RUNBOOK.md in this branch, not the older Drive source overlay/five-setting guide.
+**Lab evidence now complete:** actual Python 3.11.13 / Torch 2.7.1+cu128 / Transformers 5.2.0 / kvpress 0.5.5 RTX 5090 execution, nine full fixed runs, adaptive calibration/evaluation, recorded per-example time and measured peak allocation. Source commit: `82d40f72eb8c3a8313c4da95d2dbe22913aaad7a`. All 8,000 TurboQuant predictions re-score correctly. The adaptive result is a null allocation outcome, not an improvement. [Results and verification](../results/sem1/analysis/RESULTS.md). The tenth available fixed variant (uniform 2-bit QJL-off) and separate context/RULER/EtQ studies were not executed for this release.
 
 ## Input provenance
 

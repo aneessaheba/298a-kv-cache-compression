@@ -27,3 +27,7 @@ dist/
 *.zip
 .coverage
 htmlcov/
+
+# Version the verified Semester 1 evidence and regenerated figures.
+!results/sem1/
+!results/sem1/**

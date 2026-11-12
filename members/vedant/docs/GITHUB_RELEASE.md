@@ -1,9 +1,9 @@
-# GitHub source and later results
+# GitHub source and Semester 1 evidence
 
-Authorized repository: https://github.com/aneessaheba/298a-kv-cache-compression
+Repository: https://github.com/aneessaheba/298a-kv-cache-compression
 
-Source branch: `vedant/turboquant-reference-implementation`; draft PR #4. Version 0.3.0 adds the shared BF16 press, lab compatibility fixes, fractional presets, calibration corrections and behavioral tests. GPU results remain pending and belong in a later results commit.
+Source PR #4 has merged. The completed experiments used pinned commit `82d40f72eb8c3a8313c4da95d2dbe22913aaad7a`; archived fingerprints are intentionally not rewritten to a newer main commit. The later reporting branch is `vedant/turboquant-workbook2-results`.
 
-Validate with the package test suite, shell syntax checks and `git diff --check`. Keep datasets, model weights, environment folders and credentials out of commits. Retain third-party notices.
+The results release contains ten complete experiments (nine fixed and one adaptive), 8,000 per-record outputs with manifests/summaries, 512 real-KV layer reports, environment/log evidence, CPU-only validation/figure regeneration and Workbook 2 contribution text. [Entry point](../results/sem1/README.md).
 
-Follow GPU_RUNBOOK.md in this checkout rather than overwriting it with the older Drive fix ZIP. Retrieve predictions, adjacent run manifests, summaries, environment, exact source commit and logs from the lab. Publish only intended result artifacts after checking them for credentials and size. Do not claim logical packed bytes are measured allocated GPU-memory savings.
+Large weights, raw prompt datasets, real-KV tensors and full backup archives remain outside Git. The original archives are independently backed up and checked. Quantizer code and the shared evaluation harness are unchanged in this reporting release. Preserve the distinction between computed packed size and allocated GPU memory; preserve the null adaptive outcome.

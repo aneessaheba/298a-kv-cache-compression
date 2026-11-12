@@ -1,0 +1,77 @@
+{
+  "archive_sha256": "e9f5b0f2cec77dd44e5b24c32dcde863676ad861a96884ba74628b2877e8687f",
+  "gzip_crc_passed": true,
+  "path_checks_passed": true,
+  "settings": [
+    {
+      "method": "turboquant_2bit",
+      "records": 800,
+      "score": 14.94,
+      "all_three_files_match_verified_copies": true
+    },
+    {
+      "method": "turboquant_2.5bit",
+      "records": 800,
+      "score": 39.89,
+      "all_three_files_match_verified_copies": true
+    },
+    {
+      "method": "turboquant_3bit",
+      "records": 800,
+      "score": 44.48,
+      "all_three_files_match_verified_copies": true
+    },
+    {
+      "method": "turboquant_3.5bit",
+      "records": 800,
+      "score": 47.25,
+      "all_three_files_match_verified_copies": true
+    },
+    {
+      "method": "turboquant_4bit",
+      "records": 800,
+      "score": 47.67,
+      "all_three_files_match_verified_copies": true
+    },
+    {
+      "method": "turboquant_mse_2.5bit",
+      "records": 800,
+      "score": 46.44,
+      "all_three_files_match_verified_copies": true
+    },
+    {
+      "method": "turboquant_mse_3bit",
+      "records": 800,
+      "score": 47.9,
+      "all_three_files_match_verified_copies": true
+    },
+    {
+      "method": "turboquant_mse_3.5bit",
+      "records": 800,
+      "score": 47.84,
+      "all_three_files_match_verified_copies": true
+    },
+    {
+      "method": "turboquant_mse_4bit",
+      "records": 800,
+      "score": 47.56,
+      "all_three_files_match_verified_copies": true
+    }
+  ],
+  "total_predictions": 7200,
+  "queue_statuses": [
+    "turboquant_4bit exit=0 PASS",
+    "turboquant_mse_3bit exit=0 PASS",
+    "turboquant_mse_4bit exit=0 PASS",
+    "turboquant_mse_2.5bit exit=0 PASS",
+    "turboquant_mse_3.5bit exit=0 PASS"
+  ],
+  "source_commit_recorded": true,
+  "runtime_constraints": [
+    "torch==2.7.1+cu128",
+    "transformers==5.2.0",
+    "kvpress==0.5.5",
+    "tokenizers==0.22.2",
+    "accelerate==1.15.0"
+  ]
+}
