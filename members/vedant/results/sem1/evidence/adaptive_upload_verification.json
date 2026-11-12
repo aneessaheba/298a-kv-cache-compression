@@ -1,0 +1,54 @@
+{
+  "records": 800,
+  "heldout": 768,
+  "calibration_samples": 16,
+  "layer_reports": 512,
+  "rescoring_mismatches": 0,
+  "oom": 0,
+  "blank_predictions": 0,
+  "all_800_score": 44.57,
+  "heldout_adaptive_score": 44.49703180792982,
+  "heldout_baseline_score": 47.4484936468503,
+  "heldout_uniform_3bit_score": 44.409566812166084,
+  "vs_baseline": {
+    "adaptive_minus_reference_pp": -2.95146183892048,
+    "paired_task_stratified_95ci_pp": [
+      -4.735176380633506,
+      -1.1187758744994707
+    ]
+  },
+  "vs_uniform_3bit": {
+    "adaptive_minus_reference_pp": 0.08746499576373878,
+    "paired_task_stratified_95ci_pp": [
+      -0.4753821017806875,
+      0.6505515258998755
+    ]
+  },
+  "allocation_summary": {
+    "layers": 32,
+    "average_nominal_bits": 3.0,
+    "qjl_layers": 32,
+    "selected_rounded_bytes_per_vector": 3264,
+    "selected_measured_bytes_per_vector": 3264.0,
+    "reference_objective": 6.870504959851416,
+    "selected_objective": 6.870504959851416,
+    "objective_reduction": 0.0,
+    "within_reference_storage": true
+  },
+  "allocation_bits": {
+    "3": 32
+  },
+  "model_revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+  "runtime": {
+    "torch": "2.7.1+cu128",
+    "transformers": "5.2.0",
+    "kvpress": "0.5.5",
+    "tokenizers": "0.22.2",
+    "rapidfuzz": "3.14.6",
+    "rouge": "1.0.1"
+  },
+  "source_commit": "82d40f72eb8c3a8313c4da95d2dbe22913aaad7a",
+  "zip_crc": "PASS",
+  "adaptive_gzip_crc": "PASS",
+  "original_nine_run_archive": "unchanged"
+}

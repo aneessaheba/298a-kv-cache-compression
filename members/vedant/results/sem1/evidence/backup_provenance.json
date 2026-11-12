@@ -1,0 +1,13 @@
+{
+  "fixed_archive_sha256": "e9f5b0f2cec77dd44e5b24c32dcde863676ad861a96884ba74628b2877e8687f",
+  "adaptive_zip_crc": "PASS",
+  "adaptive_gzip_crc": "PASS",
+  "retained_tensor_sample": [
+    {
+      "name": "results/turboquant_adaptive_sem1/calibration/sample_0/calibration_kv.safetensors",
+      "bytes": 1610621888,
+      "sha256": "23c23fb3ed3252dce32013090a224260bc6529d64b21d8be75e32382c89d2e16"
+    }
+  ],
+  "large_archives_and_tensor_in_git": false
+}

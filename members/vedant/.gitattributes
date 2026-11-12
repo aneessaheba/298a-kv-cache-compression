@@ -4,3 +4,8 @@
 *.csv text eol=lf
 # Preserve the pinned upstream scorer byte-for-byte, including its whitespace.
 src/turboquant/vendor/longbench/metrics.py -text -whitespace
+
+# Preserve byte-exact archived GPU evidence and original hardware output.
+results/sem1/** -text
+results/sem1/evidence/** -whitespace
+results/sem1/adaptive/allocation/*.csv -whitespace

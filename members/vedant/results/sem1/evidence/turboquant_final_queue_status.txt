@@ -1,0 +1,5 @@
+turboquant_4bit exit=0 PASS
+turboquant_mse_3bit exit=0 PASS
+turboquant_mse_4bit exit=0 PASS
+turboquant_mse_2.5bit exit=0 PASS
+turboquant_mse_3.5bit exit=0 PASS

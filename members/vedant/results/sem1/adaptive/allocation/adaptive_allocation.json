@@ -1,0 +1,1307 @@
+{
+  "schema_version": 1,
+  "method": "adaptive_turboquant",
+  "qjl_policy": "on",
+  "budget": {
+    "reference_bits": 3,
+    "reference_qjl_keys": true,
+    "rounded_bytes_per_vector": 3264,
+    "measured_reference_bytes_per_vector": 3264.0
+  },
+  "summary": {
+    "layers": 32,
+    "average_nominal_bits": 3.0,
+    "qjl_layers": 32,
+    "selected_rounded_bytes_per_vector": 3264,
+    "selected_measured_bytes_per_vector": 3264.0,
+    "reference_objective": 6.870504959851416,
+    "selected_objective": 6.870504959851416,
+    "objective_reduction": 0.0,
+    "within_reference_storage": true
+  },
+  "layers": [
+    {
+      "layer": 0,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.20937162809919144,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17546657185384107,
+      "value_error": 0.03390505624535036
+    },
+    {
+      "layer": 1,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21737980689480568,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18328893555991654,
+      "value_error": 0.034090871334889146
+    },
+    {
+      "layer": 2,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.2059628387558363,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17188406639664738,
+      "value_error": 0.03407877235918891
+    },
+    {
+      "layer": 3,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21037310533669398,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17626577487911005,
+      "value_error": 0.03410733045758393
+    },
+    {
+      "layer": 4,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.2123338178705148,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17844726505655928,
+      "value_error": 0.03388655281395553
+    },
+    {
+      "layer": 5,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21531892658840748,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18132964265997883,
+      "value_error": 0.033989283928428655
+    },
+    {
+      "layer": 6,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21605633208605582,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.1820768529948799,
+      "value_error": 0.033979479091175914
+    },
+    {
+      "layer": 7,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21571333675514895,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18174112993521976,
+      "value_error": 0.03397220681992918
+    },
+    {
+      "layer": 8,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21782945305482485,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18388530339933729,
+      "value_error": 0.03394414965548757
+    },
+    {
+      "layer": 9,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21385852980754402,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17984273453641977,
+      "value_error": 0.03401579527112424
+    },
+    {
+      "layer": 10,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21938017607410604,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18544593736861753,
+      "value_error": 0.03393423870548851
+    },
+    {
+      "layer": 11,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.2146757261631061,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18069754810236463,
+      "value_error": 0.03397817806074148
+    },
+    {
+      "layer": 12,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.22053125636260687,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18657886584101585,
+      "value_error": 0.033952390521591026
+    },
+    {
+      "layer": 13,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21234494688739203,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.1783602218846456,
+      "value_error": 0.03398472500274644
+    },
+    {
+      "layer": 14,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21267556661070336,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17869645607117216,
+      "value_error": 0.0339791105395312
+    },
+    {
+      "layer": 15,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.2143235591526722,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18037114983728836,
+      "value_error": 0.03395240931538384
+    },
+    {
+      "layer": 16,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.2103971041566825,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.1764040280078069,
+      "value_error": 0.03399307614887559
+    },
+    {
+      "layer": 17,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.22150024713328104,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18761420270178158,
+      "value_error": 0.033886044431499444
+    },
+    {
+      "layer": 18,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21122387297409495,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17732269342924314,
+      "value_error": 0.033901179544851806
+    },
+    {
+      "layer": 19,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21369954835788377,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17974930720978155,
+      "value_error": 0.033950241148102224
+    },
+    {
+      "layer": 20,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.2163785576967306,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18253115763868752,
+      "value_error": 0.03384740005804307
+    },
+    {
+      "layer": 21,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21263081926559926,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17877587623299804,
+      "value_error": 0.033854943032601226
+    },
+    {
+      "layer": 22,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21823047364459902,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.1843149143920464,
+      "value_error": 0.03391555925255262
+    },
+    {
+      "layer": 23,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21602552931627905,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.1820528700165899,
+      "value_error": 0.03397265929968915
+    },
+    {
+      "layer": 24,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21406838901952813,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18017077649619284,
+      "value_error": 0.03389761252333527
+    },
+    {
+      "layer": 25,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.2130661247353016,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17907307736845368,
+      "value_error": 0.03399304736684792
+    },
+    {
+      "layer": 26,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21346453786811626,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17940106982573958,
+      "value_error": 0.034063468042376664
+    },
+    {
+      "layer": 27,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21625485839785327,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18227809272078824,
+      "value_error": 0.03397676567706504
+    },
+    {
+      "layer": 28,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.2161712668742653,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.182234501656536,
+      "value_error": 0.03393676521772928
+    },
+    {
+      "layer": 29,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21554415117732106,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18148266416777908,
+      "value_error": 0.03406148700954199
+    },
+    {
+      "layer": 30,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21396568764844975,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17986737023469893,
+      "value_error": 0.03409831741375083
+    },
+    {
+      "layer": 31,
+      "bits": 3,
+      "qjl_keys": true,
+      "candidate": "3bit_qjl",
+      "objective": 0.21975478508582078,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18593125395645027,
+      "value_error": 0.033823531129370504
+    }
+  ],
+  "candidates": [
+    {
+      "layer": 0,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6599774881794375,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5440153001821014,
+      "value_error": 0.11596218799733604,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 0,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.20937162809919144,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17546657185384107,
+      "value_error": 0.03390505624535036,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 0,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06074842107693294,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.0515152417653527,
+      "value_error": 0.009233179311580245,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 1,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6845872098225118,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5683349744960777,
+      "value_error": 0.116252235326434,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 1,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21737980689480568,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18328893555991654,
+      "value_error": 0.034090871334889146,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 1,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06296793466161843,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05361480540990542,
+      "value_error": 0.00935312925171302,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 2,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6498057711665001,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5336756898092495,
+      "value_error": 0.11613008135725056,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 2,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.2059628387558363,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17188406639664738,
+      "value_error": 0.03407877235918891,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 2,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.059911499501620696,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05055625078965025,
+      "value_error": 0.009355248711970441,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 3,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6660554810125483,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5497618441614534,
+      "value_error": 0.11629363685109496,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 3,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21037310533669398,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17626577487911005,
+      "value_error": 0.03410733045758393,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 3,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.060643028887997,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05126915135162999,
+      "value_error": 0.00937387753636701,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 4,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6681352043824345,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5523248954598541,
+      "value_error": 0.11581030892258037,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 4,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.2123338178705148,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17844726505655928,
+      "value_error": 0.03388655281395553,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 4,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06181909820643197,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05252842539155049,
+      "value_error": 0.009290672814881485,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 5,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6809130593210495,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5648478708019626,
+      "value_error": 0.1160651885190869,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 5,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21531892658840748,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18132964265997883,
+      "value_error": 0.033989283928428655,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 5,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.062353640268529444,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05302177918782993,
+      "value_error": 0.009331861080699512,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 6,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.679549049315858,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5635028041385599,
+      "value_error": 0.11604624517729806,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 6,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21605633208605582,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.1820768529948799,
+      "value_error": 0.033979479091175914,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 6,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06268665244353414,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.053369883041222047,
+      "value_error": 0.009316769402312082,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 7,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6841795891258939,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5681531032006958,
+      "value_error": 0.11602648592519821,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 7,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21571333675514895,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18174112993521976,
+      "value_error": 0.03397220681992918,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 7,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.062328921038136254,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05301104627060907,
+      "value_error": 0.009317874767527184,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 8,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6898276118881348,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.573865725570271,
+      "value_error": 0.11596188631786376,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 8,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21782945305482485,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18388530339933729,
+      "value_error": 0.03394414965548757,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 8,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06293719589362831,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05362724831009411,
+      "value_error": 0.009309947583534197,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 9,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.675775897925882,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.559651886482278,
+      "value_error": 0.11612401144360394,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 9,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21385852980754402,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17984273453641977,
+      "value_error": 0.03401579527112424,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 9,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.061881297436421234,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05255343924705141,
+      "value_error": 0.009327858189369825,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 10,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6887692211275466,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5728402543744877,
+      "value_error": 0.11592896675305886,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 10,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21938017607410604,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18544593736861753,
+      "value_error": 0.03393423870548851,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 10,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06384424987484022,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.054539223669771604,
+      "value_error": 0.009305026205068621,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 11,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6778214597232716,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5618644240040875,
+      "value_error": 0.11595703571918399,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 11,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.2146757261631061,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18069754810236463,
+      "value_error": 0.03397817806074148,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 11,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06233436134447156,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05300475878006449,
+      "value_error": 0.009329602564407069,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 12,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6923174628453901,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5763900998309267,
+      "value_error": 0.11592736301446344,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 12,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.22053125636260687,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18657886584101585,
+      "value_error": 0.033952390521591026,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 12,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06453271091724266,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05521976932020122,
+      "value_error": 0.00931294159704144,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 13,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6755730126873055,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5595462225761267,
+      "value_error": 0.11602679011117878,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 13,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21234494688739203,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.1783602218846456,
+      "value_error": 0.03398472500274644,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 13,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06134862246496942,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05202597679160779,
+      "value_error": 0.009322645673361633,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 14,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6731106544079575,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5571192632352501,
+      "value_error": 0.11599139117270743,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 14,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21267556661070336,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17869645607117216,
+      "value_error": 0.0339791105395312,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 14,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.061506440064927004,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.052186495626622746,
+      "value_error": 0.009319944438304258,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 15,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6768135462752164,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.560856216278842,
+      "value_error": 0.11595732999637438,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 15,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.2143235591526722,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18037114983728836,
+      "value_error": 0.03395240931538384,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 15,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06208049651502163,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05276609350555706,
+      "value_error": 0.009314403009464565,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 16,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6689165287987883,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5528244490085533,
+      "value_error": 0.11609207979023492,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 16,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.2103971041566825,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.1764040280078069,
+      "value_error": 0.03399307614887559,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 16,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06073732574030623,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05141757229970877,
+      "value_error": 0.009319753440597451,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 17,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6894508745080548,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.573675351563033,
+      "value_error": 0.11577552294502176,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 17,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.22150024713328104,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18761420270178158,
+      "value_error": 0.033886044431499444,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 17,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06517904391610949,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05588560333168518,
+      "value_error": 0.009293440584424304,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 18,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.670858060872518,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5549593335622851,
+      "value_error": 0.11589872731023287,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 18,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21122387297409495,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17732269342924314,
+      "value_error": 0.033901179544851806,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 18,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.061035541026941274,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05173805168828179,
+      "value_error": 0.009297489338659481,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 19,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6744880063973137,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5585498663382996,
+      "value_error": 0.11593814005901402,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 19,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21369954835788377,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17974930720978155,
+      "value_error": 0.033950241148102224,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 19,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06172805820878383,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05241499805024621,
+      "value_error": 0.009313060158537625,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 20,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6806730250776448,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5650817700011825,
+      "value_error": 0.11559125507646231,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 20,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.2163785576967306,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18253115763868752,
+      "value_error": 0.03384740005804307,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 20,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06277155741047542,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05348888299239975,
+      "value_error": 0.00928267441807567,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 21,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6742505550360336,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5585185414549384,
+      "value_error": 0.1157320135810952,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 21,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21263081926559926,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17877587623299804,
+      "value_error": 0.033854943032601226,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 21,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06148934921891693,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05220063070674011,
+      "value_error": 0.009288718512176825,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 22,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6829207872087716,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5670293806787371,
+      "value_error": 0.1158914065300345,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 22,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21823047364459902,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.1843149143920464,
+      "value_error": 0.03391555925255262,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 22,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06368645970262171,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.054385334154816084,
+      "value_error": 0.00930112554780563,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 23,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6816795985956937,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5655418175230518,
+      "value_error": 0.11613778107264193,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 23,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21602552931627905,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.1820528700165899,
+      "value_error": 0.03397265929968915,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 23,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06258166584962485,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.053265240103529995,
+      "value_error": 0.009316425746094861,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 24,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6759295325640331,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5601494944259032,
+      "value_error": 0.11578003813812987,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 24,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21406838901952813,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18017077649619284,
+      "value_error": 0.03389761252333527,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 24,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06193477351638572,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05263520698778119,
+      "value_error": 0.009299566528604529,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 25,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6824929128352036,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5663763361120894,
+      "value_error": 0.11611657672311429,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 25,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.2130661247353016,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17907307736845368,
+      "value_error": 0.03399304736684792,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 25,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06151870484681774,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05219795814700383,
+      "value_error": 0.009320746699813915,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 26,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6732447979568749,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5570534539745617,
+      "value_error": 0.1161913439823131,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 26,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21346453786811626,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17940106982573958,
+      "value_error": 0.034063468042376664,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 26,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.061834012653442766,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.052479424369848496,
+      "value_error": 0.009354588283594268,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 27,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6766662198002911,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5606073116697717,
+      "value_error": 0.11605890813051928,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 27,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21625485839785327,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18227809272078824,
+      "value_error": 0.03397676567706504,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 27,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06329343080141973,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.053974839496770746,
+      "value_error": 0.009318591304648988,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 28,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6881043337899637,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5721628193128232,
+      "value_error": 0.1159415144771405,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 28,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.2161712668742653,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.182234501656536,
+      "value_error": 0.03393676521772928,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 28,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06232763179776499,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05301612863399438,
+      "value_error": 0.009311503163770603,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 29,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6741127648542088,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5577645526098107,
+      "value_error": 0.11634821224439804,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 29,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21554415117732106,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18148266416777908,
+      "value_error": 0.03406148700954199,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 29,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06278116828691375,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.053451796934773296,
+      "value_error": 0.009329371352140455,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 30,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6776466489533859,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5613638188307588,
+      "value_error": 0.11628283012262704,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 30,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21396568764844975,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.17986737023469893,
+      "value_error": 0.03409831741375083,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 30,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06203356372804025,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.052665759326165934,
+      "value_error": 0.00936780440187432,
+      "name": "4bit_qjl"
+    },
+    {
+      "layer": 31,
+      "bits": 2,
+      "qjl_keys": true,
+      "objective": 0.6938077897182124,
+      "bytes_per_vector": 70.0,
+      "key_error": 0.5782440893852938,
+      "value_error": 0.11556370033291863,
+      "name": "2bit_qjl"
+    },
+    {
+      "layer": 31,
+      "bits": 3,
+      "qjl_keys": true,
+      "objective": 0.21975478508582078,
+      "bytes_per_vector": 102.0,
+      "key_error": 0.18593125395645027,
+      "value_error": 0.033823531129370504,
+      "name": "3bit_qjl"
+    },
+    {
+      "layer": 31,
+      "bits": 4,
+      "qjl_keys": true,
+      "objective": 0.06366114093706449,
+      "bytes_per_vector": 134.0,
+      "key_error": 0.05439886698054496,
+      "value_error": 0.009262273956519526,
+      "name": "4bit_qjl"
+    }
+  ],
+  "objective_definition": "key_weight * key_normalized_mse + value_weight * value_normalized_mse"
+}

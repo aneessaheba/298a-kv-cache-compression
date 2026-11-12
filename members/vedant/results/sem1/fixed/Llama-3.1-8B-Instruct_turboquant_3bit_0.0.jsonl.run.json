@@ -1,0 +1,24 @@
+{
+  "run_fingerprint": "7d84a11f1405320094efc56cb19ed9a2f05c0844ca49e28ff0df5de063be5d28",
+  "specification": {
+    "model": "meta-llama/Llama-3.1-8B-Instruct",
+    "dtype": "bfloat16",
+    "press": "turboquant_3bit",
+    "dataset_sha256": "fc9d8649f535619c6b3dbe31ad158b112131d85230f92cd253c2e32bb1b7a47c",
+    "tasks": [],
+    "per_task": null,
+    "max_prompt_tokens": null,
+    "runtime": {
+      "torch": "2.7.1+cu128",
+      "transformers": "5.2.0",
+      "kvpress": "0.5.5",
+      "tokenizers": "0.22.2",
+      "rapidfuzz": "3.14.6",
+      "rouge": "1.0.1"
+    },
+    "allocation_sha256": null,
+    "scorer_sha256": "afeeb573c1c5068b2c594d6a0584bc6649f46d6dae5596d9f1e63ae07abd0019",
+    "runner_sha256": "c9ba5d5cd6dae2286fc4426ae0077645f0300c7196c765fd9b423b429f41ad2a",
+    "implementation_sha256": "3c874f0c6c1a3f5eecf4c2e0b32d5f6f055488c4c64fb6a2d8f313339599eda0"
+  }
+}
